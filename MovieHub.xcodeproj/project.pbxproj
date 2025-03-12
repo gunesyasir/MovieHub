@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		626A0E892D7E6D9800E7C56C /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 626A0E882D7E6D9800E7C56C /* Kingfisher */; };
+		626A0E8C2D7E6E1D00E7C56C /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 626A0E8B2D7E6E1D00E7C56C /* RealmSwift */; };
+		626A0E8F2D7E6E7200E7C56C /* SwipeCellKit in Frameworks */ = {isa = PBXBuildFile; productRef = 626A0E8E2D7E6E7200E7C56C /* SwipeCellKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		626A0DB02D7118FD00E7C56C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -30,7 +36,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		626A0DC12D7118FD00E7C56C /* Exceptions for "MovieHub" folder in "MovieHub" target */ = {
+		626A12872D80F72900E7C56C /* Exceptions for "MovieHub" folder in "MovieHub" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -40,14 +46,6 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		626A0D9B2D7118FC00E7C56C /* MovieHub */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				626A0DC12D7118FD00E7C56C /* Exceptions for "MovieHub" folder in "MovieHub" target */,
-			);
-			path = MovieHub;
-			sourceTree = "<group>";
-		};
 		626A0DB22D7118FD00E7C56C /* MovieHubTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = MovieHubTests;
@@ -58,6 +56,14 @@
 			path = MovieHubUITests;
 			sourceTree = "<group>";
 		};
+		626A12422D80F72800E7C56C /* MovieHub */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				626A12872D80F72900E7C56C /* Exceptions for "MovieHub" folder in "MovieHub" target */,
+			);
+			path = MovieHub;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +71,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				626A0E8C2D7E6E1D00E7C56C /* RealmSwift in Frameworks */,
+				626A0E8F2D7E6E7200E7C56C /* SwipeCellKit in Frameworks */,
+				626A0E892D7E6D9800E7C56C /* Kingfisher in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -88,7 +97,7 @@
 		626A0D902D7118FC00E7C56C = {
 			isa = PBXGroup;
 			children = (
-				626A0D9B2D7118FC00E7C56C /* MovieHub */,
+				626A12422D80F72800E7C56C /* MovieHub */,
 				626A0DB22D7118FD00E7C56C /* MovieHubTests */,
 				626A0DBC2D7118FD00E7C56C /* MovieHubUITests */,
 				626A0D9A2D7118FC00E7C56C /* Products */,
@@ -121,10 +130,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				626A0D9B2D7118FC00E7C56C /* MovieHub */,
+				626A12422D80F72800E7C56C /* MovieHub */,
 			);
 			name = MovieHub;
 			packageProductDependencies = (
+				626A0E882D7E6D9800E7C56C /* Kingfisher */,
+				626A0E8B2D7E6E1D00E7C56C /* RealmSwift */,
+				626A0E8E2D7E6E7200E7C56C /* SwipeCellKit */,
 			);
 			productName = MovieHub;
 			productReference = 626A0D992D7118FC00E7C56C /* MovieHub.app */;
@@ -205,9 +217,15 @@
 			knownRegions = (
 				en,
 				Base,
+				tr,
 			);
 			mainGroup = 626A0D902D7118FC00E7C56C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				626A0E872D7E6D9800E7C56C /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				626A0E8A2D7E6E1D00E7C56C /* XCRemoteSwiftPackageReference "realm-swift" */,
+				626A0E8D2D7E6E7200E7C56C /* XCRemoteSwiftPackageReference "SwipeCellKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 626A0D9A2D7118FC00E7C56C /* Products */;
 			projectDirPath = "";
@@ -291,11 +309,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MovieHub/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MovieHub;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -322,11 +340,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MovieHub/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MovieHub;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -571,6 +589,51 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		626A0E872D7E6D9800E7C56C /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+		626A0E8A2D7E6E1D00E7C56C /* XCRemoteSwiftPackageReference "realm-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/realm/realm-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.54.3;
+			};
+		};
+		626A0E8D2D7E6E7200E7C56C /* XCRemoteSwiftPackageReference "SwipeCellKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwipeCellKit/SwipeCellKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.7.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		626A0E882D7E6D9800E7C56C /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 626A0E872D7E6D9800E7C56C /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
+		};
+		626A0E8B2D7E6E1D00E7C56C /* RealmSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 626A0E8A2D7E6E1D00E7C56C /* XCRemoteSwiftPackageReference "realm-swift" */;
+			productName = RealmSwift;
+		};
+		626A0E8E2D7E6E7200E7C56C /* SwipeCellKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 626A0E8D2D7E6E7200E7C56C /* XCRemoteSwiftPackageReference "SwipeCellKit" */;
+			productName = SwipeCellKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 626A0D912D7118FC00E7C56C /* Project object */;
 }
