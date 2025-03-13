@@ -7,7 +7,7 @@
 
 import UIKit
 
-protocol MovieCellDelegate {
+protocol MovieCellDelegate: AnyObject {
     func didTapBookmarkButton(_ cell: MovieCollectionViewCell)
 }
 
@@ -23,7 +23,7 @@ class MovieCollectionViewCell: UICollectionViewCell {
         }
     }
     
-    var delegate: MovieCellDelegate?
+    weak var delegate: MovieCellDelegate?
     
     let addButton: UIButton = {
         let button = UIButton(frame: CGRect(x: 0, y: 0, width: 30, height: 50))
