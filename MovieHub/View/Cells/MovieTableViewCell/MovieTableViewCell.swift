@@ -32,3 +32,14 @@ class MovieTableViewCell: SwipeTableViewCell {
     }
     
 }
+
+extension MovieTableViewCell: Configurable {
+    typealias Model = Movie
+    
+    func configure(with movie: Movie) {
+        let posterURL = ImageUtils.getImageURL(from: movie.posterPath)
+        movieImage.setImage(with: posterURL)
+        movieTitle.text = movie.title
+        releaseDate.text = DateUtils.convertToMonthAndYearFormat(from: movie.releaseDate)
+    }
+}

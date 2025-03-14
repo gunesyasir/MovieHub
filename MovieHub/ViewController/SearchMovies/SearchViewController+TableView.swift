@@ -17,10 +17,7 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: MovieTableViewCell.self)) as! MovieTableViewCell
         
-        let posterURL = ImageUtils.getImageURL(from: movie.posterPath)
-        cell.movieImage.setImage(with: posterURL)
-        cell.movieTitle.text = movie.title
-        cell.releaseDate.text = DateUtils.convertToMonthAndYearFormat(from: movie.releaseDate)
+        cell.configure(with: movie)
         
         return cell
     }

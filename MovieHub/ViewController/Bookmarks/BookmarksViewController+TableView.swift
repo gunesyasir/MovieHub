@@ -38,10 +38,7 @@ extension BookmarksViewController: UITableViewDelegate, UITableViewDataSource, S
         
         let movie = bookmarksViewModel.movieList[indexPath.row]
 
-        let posterURL = ImageUtils.getImageURL(from: movie.posterPath)
-        cell.movieImage.setImage(with: posterURL)
-        cell.movieTitle.text = movie.title
-        cell.releaseDate.text = DateUtils.convertToMonthAndYearFormat(from: movie.releaseDate)
+        cell.configure(with: movie)
         
         TableViewCellUtils.modifySeparators(at: indexPath, listLength: bookmarksViewModel.movieList.count, insetDimension: 3, topInset: cell.topInset, bottomInset: cell.bottomInset)
         
