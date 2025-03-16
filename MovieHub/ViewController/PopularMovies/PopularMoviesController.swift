@@ -7,6 +7,7 @@
 
 import UIKit
 import Kingfisher
+import Combine
 
 final class PopularMoviesViewController: BaseViewController {
     @IBOutlet weak var collectionView: UICollectionView!
@@ -14,30 +15,38 @@ final class PopularMoviesViewController: BaseViewController {
     
     var popularMoviesViewModel = PopularMoviesViewModel()
     let movieDBManager = DBManager<Movie>.shared
+    private var cancellables = Set<AnyCancellable>()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         configureTabBar()
         setUpCollectionView()
         fetchMovies()
+        setupBindings()
+    }
+        
+    private func setupBindings() {
+        popularMoviesViewModel.movieDetailData
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] result in
+                guard let self = self else { return }
+                self.toggleActivityIndicator(show: false)
+                
+                switch result {
+                    case .success(let movie):
+                        NavigationUtils.navigateToMovieDetail(from: self, movie: movie)
+                    case .failure(let message, let id):
+                        self.showError(message: message, onTryAgain: {
+                            self.fetchMovieDetail(of: id)
+                        })
+                }
+            }
+            .store(in: &cancellables)
     }
     
     func fetchMovieDetail(of id: Int) {
         toggleActivityIndicator(show: true)
-        popularMoviesViewModel.fetchMovieDetail(of: id) { [weak self] error in
-            self?.toggleActivityIndicator(show: false)
-            
-            if let movie = self?.popularMoviesViewModel.movieDetailData {
-                NavigationUtils.navigateToMovieDetail(from: self!, movie: movie)
-                return
-            }
-            
-            if let error = error {
-                self?.showError(message: error, onTryAgain: {
-                    self?.fetchMovieDetail(of: id)
-                })
-            }
-        }
+        popularMoviesViewModel.fetchMovieDetail(of: id)
     }
         
     private func fetchMovies() {
@@ -75,5 +84,3 @@ final class PopularMoviesViewController: BaseViewController {
     }
     
 }
-
-

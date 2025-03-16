@@ -7,10 +7,16 @@
 
 import Foundation
 import RealmSwift
+import Combine
+
+enum MovieDetailResult {
+    case success(Movie)
+    case failure(message: String, id: Int)
+}
 
 class PopularMoviesViewModel {
     private var currentPageCount = 0
-    private(set) var movieDetailData: Movie?
+    private(set) var movieDetailData = PassthroughSubject<MovieDetailResult, Never>()
     private(set) var movieList: [Movie] = []
     private var notificationToken: NotificationToken? = nil
     private var totalPageCount = 0
@@ -28,14 +34,14 @@ class PopularMoviesViewModel {
             }
             
             switch result {
-                case .success(let data):
-                    self.movieList.append(contentsOf: data.results)
-                    self.currentPageCount = data.page ?? self.currentPageCount + 1
-                    self.totalPageCount = data.totalPages ?? self.totalPageCount
-                    completion(nil)
-                            
-                case .failure( _):
-                    completion(LocalizedStrings.errorMessage.localized)
+            case .success(let data):
+                self.movieList.append(contentsOf: data.results)
+                self.currentPageCount = data.page ?? self.currentPageCount + 1
+                self.totalPageCount = data.totalPages ?? self.totalPageCount
+                completion(nil)
+                
+            case .failure( _):
+                completion(LocalizedStrings.errorMessage.localized)
             }
         }
     }
@@ -46,21 +52,16 @@ class PopularMoviesViewModel {
         fetchMovies(completion: completion)
     }
     
-    func fetchMovieDetail(of id: Int, completion: @escaping (String?) -> Void) {
+    func fetchMovieDetail(of id: Int) {
         NetworkUtils.getMovieDetail(of: id) { [weak self] result in
-            guard let self = self else {
-                completion(LocalizedStrings.errorMessage.localized)
-                return
-            }
+            guard let self = self else { return }
             
             switch result {
-                case .success(let data):
-                    self.movieDetailData = data
-                    completion(nil)
-                    
-                case .failure( _):
-                    self.movieDetailData = nil
-                    completion(LocalizedStrings.errorMessage.localized)
+            case .success(let data):
+                self.movieDetailData.send(.success(data))
+                
+            case .failure( _):
+                self.movieDetailData.send(.failure(message: LocalizedStrings.errorMessage.localized,id: id))
             }
         }
     }
