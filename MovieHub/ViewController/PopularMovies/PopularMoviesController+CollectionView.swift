@@ -41,14 +41,12 @@ extension PopularMoviesViewController: UICollectionViewDelegate, UICollectionVie
     func configureCell(_ cell: MovieCollectionViewCell, for movie: Movie) {
         cell.delegate = self
         
-        if let manager = movieDBManager {
-            manager.isObjectInDatabase(primaryKey: movie.id) { result in
-                switch result {
-                    case .failure( _):
-                        break
-                    case .success(let isBookmarked):
-                        cell.isBookmarked = isBookmarked
-                }
+        movieDBManager.isObjectInDatabase(primaryKey: movie.id) { result in
+            switch result {
+            case .failure( _):
+                break
+            case .success(let isBookmarked):
+                cell.isBookmarked = isBookmarked
             }
         }
         
@@ -69,32 +67,30 @@ extension PopularMoviesViewController: UICollectionViewDelegate, UICollectionVie
         if let indexPath = collectionView.indexPath(for: cell) {
             let movieId = popularMoviesViewModel.movieList[indexPath.row].id
             
-            if let manager = movieDBManager {
-                manager.fetchObjectByPrimaryKey(primaryKey: movieId){ result in
-                    switch result {
-                        case .failure( _):
-                            break
-                        case .success(let movie):
-                            if let movie = movie {
-                                manager.deleteObject(primaryKey: movie.id) { result in
-                                    switch result {
-                                        case .failure( _):
-                                            break
-                                        case .success( _):
-                                            cell.isBookmarked = !cell.isBookmarked
-                                    }
-                                }
-                            } else {
-                                manager.saveObject(self.popularMoviesViewModel.movieList[indexPath.row]) { result in
-                                    switch result {
-                                        case .failure( _):
-                                            break
-                                        case .success( _):
-                                            cell.isBookmarked = !cell.isBookmarked
-                                    }
-                                }
+            movieDBManager.fetchObjectByPrimaryKey(primaryKey: movieId){ [weak self] result in
+                switch result {
+                case .failure( _):
+                    break
+                case .success(let movie):
+                    if let movie = movie {
+                        self?.movieDBManager.deleteObject(primaryKey: movie.id) { result in
+                            switch result {
+                            case .failure( _):
+                                break
+                            case .success( _):
+                                cell.isBookmarked = !cell.isBookmarked
                             }
                         }
+                    } else {
+                        self?.movieDBManager.saveObject(self!.popularMoviesViewModel.movieList[indexPath.row]) { result in
+                            switch result {
+                            case .failure( _):
+                                break
+                            case .success( _):
+                                cell.isBookmarked = !cell.isBookmarked
+                            }
+                        }
+                    }
                 }
             }
         }

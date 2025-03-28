@@ -14,7 +14,7 @@ final class PopularMoviesViewController: BaseViewController {
     @IBOutlet weak var barItem: UITabBarItem!
     
     var popularMoviesViewModel = PopularMoviesViewModel()
-    let movieDBManager = DBManager<Movie>.shared
+    let movieDBManager = DBManager.shared
     private var cancellables = Set<AnyCancellable>()
 
     override func viewDidLoad() {

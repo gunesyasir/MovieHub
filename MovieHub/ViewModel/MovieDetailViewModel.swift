@@ -30,11 +30,7 @@ class MovieDetailViewModel {
     }
     
     func addToPersistentStorage(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
-        if let manager = DBManager<Movie>.shared {
-            manager.saveObject(movie, completion: completion)
-        } else {
-            completion(.failure(.initializationFailed))
-        }
+        DBManager.shared.saveObject(movie, completion: completion)
     }
     
     func fetchMovieCast(completion: @escaping () -> Void) {
@@ -123,7 +119,7 @@ class MovieDetailViewModel {
     }
     
     func fetchMovieDetailFromDatabase(of id: Int, completion: @escaping () -> Void) {
-        if let manager = DBManager<Movie>.shared {
+        let manager = DBManager.shared
             manager.isObjectInDatabase(primaryKey: id) { result in
                 switch result {
                     case .success(let isExists):
@@ -147,16 +143,12 @@ class MovieDetailViewModel {
                         completion()
                 }
             }
-        } else {
-            self.errorMessage = LocalizedStrings.errorMessage.localized
-            completion()
-        }
     }
     
 
     
     func fetchPersistentStorageStatus(completion: @escaping () -> Void) {
-        if let manager = DBManager<Movie>.shared {
+        let manager = DBManager.shared
             manager.isObjectInDatabase(primaryKey: movie.id) { [weak self] result in
                 switch result {
                     case .success(let isExists):
@@ -167,13 +159,10 @@ class MovieDetailViewModel {
                         completion()
                 }
             }
-        } else {
-            completion()
-        }
     }
     
     func observeObject(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
-        if let dbManager = DBManager<Movie>.shared {
+        let dbManager = DBManager.shared
             dbManager.observeObject(for: movie.id, objectNotificationToken: &self.notificationToken) { result in
                 switch result {
                     case .success(.change):
@@ -186,9 +175,7 @@ class MovieDetailViewModel {
                         completion(.failure(error))
                 }
             }
-        } else {
-            completion(.failure(.initializationFailed))
-        }
+     
     }
     
     func updateDataIfMovieExistsInDatabase() {
@@ -202,10 +189,6 @@ class MovieDetailViewModel {
     }
     
     func removeFromPersistentStorage(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
-        if let manager = DBManager<Movie>.shared {
-            manager.deleteObject(primaryKey: movie.id, completion: completion)
-        } else {
-            completion(.failure(.initializationFailed))
-        }
+        DBManager.shared.deleteObject(primaryKey: movie.id, completion: completion)
     }
 }
