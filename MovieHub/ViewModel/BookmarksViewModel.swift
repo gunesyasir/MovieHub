@@ -64,7 +64,7 @@ class BookmarksViewModel {
     }
     
     func observeChanges(completion: @escaping (Result<RealmCollectionChangeStatus, DBManagerError>) -> Void) {
-        dbManager.observeChanges(notificationToken: &self.notificationToken) { result in
+        dbManager.observeCollection(notificationToken: &self.notificationToken) { result in
             switch result {
             case .success(let status):
                 completion(.success(status))

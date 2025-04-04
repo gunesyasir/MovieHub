@@ -1,5 +1,5 @@
 //
-//  MovieDetailVİewModel.swift
+//  MovieDetailViewModel.swift
 //  MovieHub
 //
 //  Created by Yasir Gunes on 10.03.2025.
@@ -7,13 +7,14 @@
 
 import Foundation
 import RealmSwift
+import Combine
 
 class MovieDetailViewModel {
     let movie: Movie
     var actorDetailData: Cast?
     var castRequestCompleted = false
     var errorMessage = ""
-    var existInDatabase = false
+    private(set) var existInDatabase = CurrentValueSubject<Bool, Never>(false)
     var movieDetailData: Movie?
     var movieUpdatedInDatabase = false // DB is updated asynchronously so this flag needed to update just once.
     var recommendedsCurrentPageCount = 0
@@ -23,13 +24,14 @@ class MovieDetailViewModel {
 
     init(movie: Movie) {
         self.movie = movie
+        startObserving()
     }
     
     deinit {
         notificationToken?.invalidate()
     }
     
-    func addToPersistentStorage(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
+    private func addToPersistentStorage(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
         DBManager.shared.saveObject(movie, completion: completion)
     }
     
@@ -145,37 +147,35 @@ class MovieDetailViewModel {
             }
     }
     
-
-    
-    func fetchPersistentStorageStatus(completion: @escaping () -> Void) {
-        let manager = DBManager.shared
-            manager.isObjectInDatabase(primaryKey: movie.id) { [weak self] result in
-                switch result {
-                    case .success(let isExists):
-                        self?.existInDatabase = isExists
-                        completion()
-                    case .failure( _):
-                        self?.existInDatabase = false
-                        completion()
-                }
+    private func startObserving() {
+        DBManager.shared.observeObject(for: movie.id, objectNotificationToken: &self.notificationToken) { result in
+            switch result {
+            case .success(.exist):
+                self.existInDatabase.send(true)
+            case .success(.nonExist):
+                self.existInDatabase.send(false)
+            case .failure(_):
+                break
             }
+        }
     }
     
-    func observeObject(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
-        let dbManager = DBManager.shared
-            dbManager.observeObject(for: movie.id, objectNotificationToken: &self.notificationToken) { result in
-                switch result {
-                    case .success(.change):
-                        self.existInDatabase = true
-                        completion(.success(()))
-                    case .success(.delete):
-                        self.existInDatabase = false
-                        completion(.success(()))
-                    case .failure(let error):
-                        completion(.failure(error))
-                }
+    func updateDatabase() {
+        let completion: (Result<Void, DBManagerError>) -> Void = { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .success(_):
+                self.existInDatabase.send(!self.existInDatabase.value)
+            case .failure(_):
+                break
             }
-     
+        }
+        
+        if existInDatabase.value {
+            removeFromPersistentStorage(completion: completion)
+        } else {
+            addToPersistentStorage(completion: completion)
+        }
     }
     
     func updateDataIfMovieExistsInDatabase() {
@@ -188,7 +188,7 @@ class MovieDetailViewModel {
         DatabaseUtils.updateDataIfMovieExistsInDatabase(for: movie)
     }
     
-    func removeFromPersistentStorage(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
+    private func removeFromPersistentStorage(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
         DBManager.shared.deleteObject(primaryKey: movie.id, completion: completion)
     }
 }

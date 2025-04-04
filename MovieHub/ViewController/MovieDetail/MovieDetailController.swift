@@ -7,6 +7,7 @@
 
 import UIKit
 import WebKit
+import Combine
 
 final class MovieDetailController: BaseViewController {
     @IBOutlet weak var addButton: UIButton!
@@ -29,6 +30,8 @@ final class MovieDetailController: BaseViewController {
     
     let movie: Movie
     let viewModel: MovieDetailViewModel
+    private var isSinkedFirstTime = false
+    private var cancellables = Set<AnyCancellable>()
     private var webView = WKWebView()
     var tableViewData: [[String: Any]] {
         var data: [[String: Any]] = []
@@ -52,32 +55,22 @@ final class MovieDetailController: BaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setUpViews()
-        fetchData()
-        observeObjectInDatabase()
+        fetchData() // TODO: Move to viewModel
+        viewModel.existInDatabase
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] result in
+                guard let self = self else { return }
+                if !self.isSinkedFirstTime {
+                    self.isSinkedFirstTime = true
+                    self.addButton.removeShimmer()
+                }
+                self.setButton()
+            }
+            .store(in: &cancellables)
     }
     
     @IBAction func addButtonPressed(_ sender: UIButton) {
-        if viewModel.existInDatabase {
-            viewModel.removeFromPersistentStorage() { [weak self] result in
-                switch result {
-                    case .success( _):
-                        self?.viewModel.existInDatabase = false
-                    case .failure( _):
-                        break
-                }
-            }
-        } else {
-            viewModel.addToPersistentStorage() { [weak self] result in
-                switch result {
-                    case .success( _):
-                        self?.viewModel.existInDatabase = true
-                    case .failure( _):
-                        break
-                }
-            }
-        }
-        
-        setButton()
+        viewModel.updateDatabase()
     }
     
     @IBAction func homepageButtonPressed(_ sender: UIButton) {
@@ -97,12 +90,7 @@ final class MovieDetailController: BaseViewController {
         fatalError("Use `init(coder:movie:)` to initialize.")
     }
     
-    private func fetchData() {
-        viewModel.fetchPersistentStorageStatus() { [weak self] in
-            self?.addButton.removeShimmer()
-            self?.setButton()
-        }
-        
+    private func fetchData() {        
         viewModel.fetchMovieCast() { [weak self] in
             guard let self = self else { return }
             
@@ -161,28 +149,14 @@ final class MovieDetailController: BaseViewController {
         }
     }
     
-    private func observeObjectInDatabase() {
-        viewModel.observeObject() { [weak self] result in
-            guard let self = self else { return }
-            
-            DispatchQueue.main.async {
-                switch result {
-                    case .success:
-                        self.setButton()
-                    case .failure(_):
-                        break
-                }
-            }
-        }
-    }
-    
     private func setButton() {
-        addButton.backgroundColor = UIColor(named: self.viewModel.existInDatabase ? "TabbarLabelColor" : "Orange")
-        addButton.setTitle(self.viewModel.existInDatabase ? LocalizedStrings.removeFromBookmarks.localized : LocalizedStrings.addToBookmarks.localized, for: .normal)
+        let isExists = viewModel.existInDatabase.value
+        addButton.backgroundColor = UIColor(named: isExists ? "TabbarLabelColor" : "Orange")
+        addButton.setTitle(isExists ? LocalizedStrings.removeFromBookmarks.localized : LocalizedStrings.addToBookmarks.localized, for: .normal)
         addButton.setTitleColor(UIColor(named: "TabbarColor"), for: .normal)
         addButton.layer.cornerRadius = 8
-        addButton.setImage(UIImage(systemName: self.viewModel.existInDatabase ? "bookmark.slash.fill" : "plus")?.withRenderingMode(.alwaysTemplate), for: .normal)
-        addButton.tintColor = self.viewModel.existInDatabase ? .gray : UIColor(named: "TabbarColor")
+        addButton.setImage(UIImage(systemName: isExists ? "bookmark.slash.fill" : "plus")?.withRenderingMode(.alwaysTemplate), for: .normal)
+        addButton.tintColor = isExists ? .gray : UIColor(named: "TabbarColor")
     }
     
     private func setupCollectionView(for collectionView: UICollectionView, of type: UICollectionViewCell.Type, autoSized: Bool = false) {

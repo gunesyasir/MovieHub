@@ -16,9 +16,9 @@ enum MovieAppError: Error {
     case error(message: String?)
 }
 
-enum RealmObjectChangeStatus {
-    case change
-    case delete
+enum RealmObjectStatus {
+    case exist
+    case nonExist
 }
 
 enum Tabs: Int {
