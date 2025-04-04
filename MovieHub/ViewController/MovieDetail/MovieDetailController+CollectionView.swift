@@ -13,7 +13,7 @@ extension MovieDetailController: UICollectionViewDelegate, UICollectionViewDataS
         if collectionView == genreCollection {
             return viewModel.movie.genres.count
         } else if collectionView == castCollection {
-            return viewModel.castRequestCompleted ? viewModel.movie.cast.count : 10
+            return viewModel.isCastRequestCompleted ? viewModel.movie.cast.count : 10
         } else { // Recommendations collection
             return viewModel.recommendedsRequestCompleted ? viewModel.movie.recommendedMovies.count : 10
         }
@@ -32,7 +32,7 @@ extension MovieDetailController: UICollectionViewDelegate, UICollectionViewDataS
             let castList = viewModel.movie.cast
             let movieList = viewModel.movie.recommendedMovies
             
-            if isCast && !viewModel.castRequestCompleted || !isCast && !viewModel.recommendedsRequestCompleted {
+            if isCast && !viewModel.isCastRequestCompleted || !isCast && !viewModel.recommendedsRequestCompleted {
                 cell.addShimmer()
                 return cell
             }

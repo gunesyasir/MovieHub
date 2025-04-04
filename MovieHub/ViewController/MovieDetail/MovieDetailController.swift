@@ -67,6 +67,21 @@ final class MovieDetailController: BaseViewController {
                 self.setButton()
             }
             .store(in: &cancellables)
+        viewModel.$isCastRequestCompleted
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] value in
+                guard let self = self, value == true else { return }
+                
+                if self.viewModel.movie.cast.isEmpty {
+                    castLabel.removeFromSuperview()
+                    castCollection.removeFromSuperview()
+                    recommendationsLabel.topAnchor.constraint(equalTo: tableView.bottomAnchor, constant: 12).isActive = true
+                } else {
+                    self.castCollection.reloadData()
+                    self.viewModel.updateDataIfMovieExistsInDatabase()
+                }
+            }
+            .store(in: &cancellables)
     }
     
     @IBAction func addButtonPressed(_ sender: UIButton) {
@@ -90,23 +105,7 @@ final class MovieDetailController: BaseViewController {
         fatalError("Use `init(coder:movie:)` to initialize.")
     }
     
-    private func fetchData() {        
-        viewModel.fetchMovieCast() { [weak self] in
-            guard let self = self else { return }
-            
-            self.viewModel.castRequestCompleted = true
-            
-            if self.viewModel.movie.cast.isEmpty {
-                castLabel.removeFromSuperview()
-                castCollection.removeFromSuperview()
-                recommendationsLabel.topAnchor.constraint(equalTo: tableView.bottomAnchor, constant: 12).isActive = true
-            }
-            
-            self.castCollection.reloadData()
-            
-            self.viewModel.updateDataIfMovieExistsInDatabase()
-        }
-        
+    private func fetchData() {
         viewModel.fetchRecommendations() { [weak self] in
             guard let self = self else { return }
             
@@ -115,7 +114,7 @@ final class MovieDetailController: BaseViewController {
             if self.viewModel.movie.recommendedMovies.isEmpty {
                 recommendationsLabel.removeFromSuperview()
                 recommendationsCollection.removeFromSuperview()
-                if self.viewModel.castRequestCompleted && self.viewModel.movie.cast.isEmpty { // No castList to reference in this case
+                if self.viewModel.isCastRequestCompleted && self.viewModel.movie.cast.isEmpty { // No castList to reference in this case
                     tableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true
                 } else {
                     castCollection.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true

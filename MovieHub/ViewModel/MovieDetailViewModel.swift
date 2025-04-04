@@ -12,7 +12,7 @@ import Combine
 class MovieDetailViewModel {
     let movie: Movie
     var actorDetailData: Cast?
-    var castRequestCompleted = false
+    @Published private(set) var isCastRequestCompleted = false
     var errorMessage = ""
     private(set) var existInDatabase = CurrentValueSubject<Bool, Never>(false)
     var movieDetailData: Movie?
@@ -24,7 +24,8 @@ class MovieDetailViewModel {
 
     init(movie: Movie) {
         self.movie = movie
-        startObserving()
+        startObservingMovie()
+        fetchMovieCast()
     }
     
     deinit {
@@ -35,26 +36,23 @@ class MovieDetailViewModel {
         DBManager.shared.saveObject(movie, completion: completion)
     }
     
-    func fetchMovieCast(completion: @escaping () -> Void) {
+    private func fetchMovieCast() {
         errorMessage = ""
         
         let service: MovieCastServiceProtocol = MovieCastService()
         service.fetchCast(of: movie.id) { [weak self] result in
-            guard let self = self else {
-                completion()
-                return
-            }
+            guard let self = self else { return }
             
             switch result {
             case .success(let data):
                 let list = data.cast.filter { $0.role == ACTING }
                 movie.cast.append(objectsIn: list)
-                completion()
                 
             case .failure( _):
                 self.errorMessage = LocalizedStrings.errorMessage.localized
-                completion()
             }
+            
+            self.isCastRequestCompleted = true
         }
     }
     
@@ -147,7 +145,7 @@ class MovieDetailViewModel {
             }
     }
     
-    private func startObserving() {
+    private func startObservingMovie() {
         DBManager.shared.observeObject(for: movie.id, objectNotificationToken: &self.notificationToken) { result in
             switch result {
             case .success(.exist):
@@ -179,7 +177,7 @@ class MovieDetailViewModel {
     }
     
     func updateDataIfMovieExistsInDatabase() {
-        if movieUpdatedInDatabase || !recommendedsRequestCompleted || !castRequestCompleted {
+        if movieUpdatedInDatabase || !recommendedsRequestCompleted || !isCastRequestCompleted {
             return
         }
         
