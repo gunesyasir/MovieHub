@@ -58,7 +58,8 @@ extension MovieDetailController: UICollectionViewDelegate, UICollectionViewDataS
         if collectionView == recommendationsCollection {
             fetchMovieDetail(of: viewModel.movie.recommendedMovies[indexPath.row].id)
         } else if collectionView == castCollection {
-            fetchCastDetail(of: viewModel.movie.cast[indexPath.row].id)
+            let actorId = viewModel.movie.cast[indexPath.row].id
+            viewModel.fetchActorDetail(of: actorId)
         }
     }
 }

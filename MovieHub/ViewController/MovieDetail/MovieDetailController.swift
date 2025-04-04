@@ -28,7 +28,7 @@ final class MovieDetailController: BaseViewController {
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var upperLabelsStack: UIStackView!
     
-    let movie: Movie
+    private let movie: Movie
     let viewModel: MovieDetailViewModel
     private var isSinkedFirstTime = false
     private var cancellables = Set<AnyCancellable>()
@@ -79,14 +79,6 @@ final class MovieDetailController: BaseViewController {
         fatalError("Use `init(coder:movie:)` to initialize.")
     }
     
-    func fetchCastDetail(of id: Int) {
-        viewModel.fetchCastDetail(of: id) { [weak self] in
-            if let actor = self?.viewModel.actorDetailData {
-                NavigationUtils.navigateToActorDetail(from: self!, actor: actor)
-            }
-        }
-    }
-    
     func fetchMovieDetail(of id: Int) {
         viewModel.fetchMovieDetail(of: id) { [weak self] in
             if let movie = self?.viewModel.movieDetailData {
@@ -132,7 +124,7 @@ final class MovieDetailController: BaseViewController {
             .sink { [weak self] value in
                 guard let self = self, value == true else { return }
                 
-                if self.viewModel.recommendedsCurrentPageCount <= 1 { // Initial request
+                if self.viewModel.recommendedsCurrentPageCount <= 1 { // Works on initial request, does not on pagination requests
                     if self.viewModel.movie.recommendedMovies.isEmpty {
                         recommendationsLabel.removeFromSuperview()
                         recommendationsCollection.removeFromSuperview()
@@ -141,12 +133,19 @@ final class MovieDetailController: BaseViewController {
                         } else {
                             castCollection.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true
                         }
-                        
-                    } else {
-                        self.recommendationsCollection.reloadData()
+                        return
                     }
-                } else { // Pagination request
-                    self.recommendationsCollection.reloadData()
+                }
+                
+                self.recommendationsCollection.reloadData()
+            }
+            .store(in: &cancellables)
+        
+        viewModel.$actorDetailData
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] data in
+                if let self = self, let actor = data {
+                    NavigationUtils.navigateToActorDetail(from: self, actor: actor)
                 }
             }
             .store(in: &cancellables)

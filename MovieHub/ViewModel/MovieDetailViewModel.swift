@@ -10,8 +10,8 @@ import RealmSwift
 import Combine
 
 class MovieDetailViewModel {
-    let movie: Movie
-    var actorDetailData: Cast?
+    @Published var movie: Movie
+    @Published private(set) var actorDetailData: Cast?
     @Published private(set) var isCastRequestCompleted = false
     var errorMessage = ""
     private(set) var existInDatabase = CurrentValueSubject<Bool, Never>(false)
@@ -58,18 +58,16 @@ class MovieDetailViewModel {
         }
     }
     
-    func fetchCastDetail(of id: Int, completion: @escaping () -> Void) {
+    func fetchActorDetail(of id: Int) {
         let service: CastDetailServiceProtocol = CastDetailService()
         service.getCastDetail(of: id) { result in
             switch result {
                 case .success(let data):
                     self.actorDetailData = data
-                    completion()
                     
                 case .failure(_):
                     self.actorDetailData = nil
                     // TODO: Check if actor in db
-                    completion()
             }
         }
     }
