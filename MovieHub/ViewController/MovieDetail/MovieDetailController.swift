@@ -55,33 +55,7 @@ final class MovieDetailController: BaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setUpViews()
-        fetchData() // TODO: Move to viewModel
-        viewModel.existInDatabase
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] result in
-                guard let self = self else { return }
-                if !self.isSinkedFirstTime {
-                    self.isSinkedFirstTime = true
-                    self.addButton.removeShimmer()
-                }
-                self.setButton()
-            }
-            .store(in: &cancellables)
-        viewModel.$isCastRequestCompleted
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] value in
-                guard let self = self, value == true else { return }
-                
-                if self.viewModel.movie.cast.isEmpty {
-                    castLabel.removeFromSuperview()
-                    castCollection.removeFromSuperview()
-                    recommendationsLabel.topAnchor.constraint(equalTo: tableView.bottomAnchor, constant: 12).isActive = true
-                } else {
-                    self.castCollection.reloadData()
-                    self.viewModel.updateDataIfMovieExistsInDatabase()
-                }
-            }
-            .store(in: &cancellables)
+        setBindings()
     }
     
     @IBAction func addButtonPressed(_ sender: UIButton) {
@@ -105,29 +79,6 @@ final class MovieDetailController: BaseViewController {
         fatalError("Use `init(coder:movie:)` to initialize.")
     }
     
-    private func fetchData() {
-        viewModel.fetchRecommendations() { [weak self] in
-            guard let self = self else { return }
-            
-            self.viewModel.recommendedsRequestCompleted = true
-            
-            if self.viewModel.movie.recommendedMovies.isEmpty {
-                recommendationsLabel.removeFromSuperview()
-                recommendationsCollection.removeFromSuperview()
-                if self.viewModel.isCastRequestCompleted && self.viewModel.movie.cast.isEmpty { // No castList to reference in this case
-                    tableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true
-                } else {
-                    castCollection.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true
-                }
-                
-            }
-            
-            self.recommendationsCollection.reloadData()
-            
-            self.viewModel.updateDataIfMovieExistsInDatabase()
-        }
-    }
-    
     func fetchCastDetail(of id: Int) {
         viewModel.fetchCastDetail(of: id) { [weak self] in
             if let actor = self?.viewModel.actorDetailData {
@@ -146,6 +97,59 @@ final class MovieDetailController: BaseViewController {
                 })
             }
         }
+    }
+    
+    private func setBindings() {
+        viewModel.existInDatabase
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] result in
+                guard let self = self else { return }
+                if !self.isSinkedFirstTime {
+                    self.isSinkedFirstTime = true
+                    self.addButton.removeShimmer()
+                }
+                self.setButton()
+            }
+            .store(in: &cancellables)
+        
+        viewModel.$isCastRequestCompleted
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] value in
+                guard let self = self, value == true else { return }
+                
+                if self.viewModel.movie.cast.isEmpty {
+                    castLabel.removeFromSuperview()
+                    castCollection.removeFromSuperview()
+                    recommendationsLabel.topAnchor.constraint(equalTo: tableView.bottomAnchor, constant: 12).isActive = true
+                } else {
+                    self.castCollection.reloadData()
+                }
+            }
+            .store(in: &cancellables)
+        
+        viewModel.$isRecommendedsRequestCompleted
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] value in
+                guard let self = self, value == true else { return }
+                
+                if self.viewModel.recommendedsCurrentPageCount <= 1 { // Initial request
+                    if self.viewModel.movie.recommendedMovies.isEmpty {
+                        recommendationsLabel.removeFromSuperview()
+                        recommendationsCollection.removeFromSuperview()
+                        if self.viewModel.isCastRequestCompleted && self.viewModel.movie.cast.isEmpty { // No castList to reference in this case
+                            tableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true
+                        } else {
+                            castCollection.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true
+                        }
+                        
+                    } else {
+                        self.recommendationsCollection.reloadData()
+                    }
+                } else { // Pagination request
+                    self.recommendationsCollection.reloadData()
+                }
+            }
+            .store(in: &cancellables)
     }
     
     private func setButton() {

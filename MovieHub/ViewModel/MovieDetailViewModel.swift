@@ -16,16 +16,17 @@ class MovieDetailViewModel {
     var errorMessage = ""
     private(set) var existInDatabase = CurrentValueSubject<Bool, Never>(false)
     var movieDetailData: Movie?
-    var movieUpdatedInDatabase = false // DB is updated asynchronously so this flag needed to update just once.
-    var recommendedsCurrentPageCount = 0
-    var recommendedsTotalPageCount = 0
-    var recommendedsRequestCompleted = false
+    private var movieUpdatedInDatabase = false // DB is updated asynchronously so this flag needed to update just once.
+    @Published private(set) var recommendedsCurrentPageCount = 0
+    private(set) var recommendedsTotalPageCount = 0
+    @Published private(set) var isRecommendedsRequestCompleted = false
     private var notificationToken: NotificationToken? = nil
 
     init(movie: Movie) {
         self.movie = movie
         startObservingMovie()
         fetchMovieCast()
+        fetchRecommendations()
     }
     
     deinit {
@@ -53,6 +54,7 @@ class MovieDetailViewModel {
             }
             
             self.isCastRequestCompleted = true
+            self.updateDataIfMovieExistsInDatabase()
         }
     }
     
@@ -91,30 +93,28 @@ class MovieDetailViewModel {
         }
     }
     
-    func fetchRecommendations(completion: @escaping () -> Void) {
+    func fetchRecommendations() {
         errorMessage = ""
         
         let service: RecommendationsServiceProtocol = RecommendationsService()
         service.getRecommendedMovies(of: movie.id, pageAt: recommendedsCurrentPageCount + 1) { [weak self] result in
-            guard let self = self else {
-                completion()
-                return
-            }
+            guard let self = self else { return }
             
             switch result {
-                case .success(let data):
-                    let recommendedMovies = data.results.map { movie in
-                        RecommendedMovie(from: movie)
-                    }
-                    movie.recommendedMovies.append(objectsIn: recommendedMovies)
-                    self.recommendedsCurrentPageCount = data.page ?? self.recommendedsCurrentPageCount + 1
-                    self.recommendedsTotalPageCount = data.totalPages ?? self.recommendedsTotalPageCount
-                    completion()
-                    
-                case .failure( _):
-                    self.errorMessage = LocalizedStrings.errorMessage.localized
-                    completion()
+            case .success(let data):
+                let recommendedMovies = data.results.map { movie in
+                    RecommendedMovie(from: movie)
                 }
+                movie.recommendedMovies.append(objectsIn: recommendedMovies)
+                self.recommendedsCurrentPageCount = data.page ?? self.recommendedsCurrentPageCount + 1
+                self.recommendedsTotalPageCount = data.totalPages ?? self.recommendedsTotalPageCount
+                
+            case .failure( _):
+                self.errorMessage = LocalizedStrings.errorMessage.localized
+            }
+            
+            self.isRecommendedsRequestCompleted = true
+            self.updateDataIfMovieExistsInDatabase()
         }
     }
     
@@ -177,7 +177,7 @@ class MovieDetailViewModel {
     }
     
     func updateDataIfMovieExistsInDatabase() {
-        if movieUpdatedInDatabase || !recommendedsRequestCompleted || !isCastRequestCompleted {
+        if movieUpdatedInDatabase || !isRecommendedsRequestCompleted || !isCastRequestCompleted {
             return
         }
         

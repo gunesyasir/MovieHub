@@ -13,9 +13,9 @@ extension MovieDetailController: UICollectionViewDelegate, UICollectionViewDataS
         if collectionView == genreCollection {
             return viewModel.movie.genres.count
         } else if collectionView == castCollection {
-            return viewModel.isCastRequestCompleted ? viewModel.movie.cast.count : 10
+            return viewModel.isCastRequestCompleted ? viewModel.movie.cast.count : 10 // Default skeleton container count
         } else { // Recommendations collection
-            return viewModel.recommendedsRequestCompleted ? viewModel.movie.recommendedMovies.count : 10
+            return viewModel.isRecommendedsRequestCompleted ? viewModel.movie.recommendedMovies.count : 10 // Default skeleton container count
         }
     }
     
@@ -32,7 +32,7 @@ extension MovieDetailController: UICollectionViewDelegate, UICollectionViewDataS
             let castList = viewModel.movie.cast
             let movieList = viewModel.movie.recommendedMovies
             
-            if isCast && !viewModel.isCastRequestCompleted || !isCast && !viewModel.recommendedsRequestCompleted {
+            if isCast && !viewModel.isCastRequestCompleted || !isCast && !viewModel.isRecommendedsRequestCompleted {
                 cell.addShimmer()
                 return cell
             }
@@ -50,9 +50,7 @@ extension MovieDetailController: UICollectionViewDelegate, UICollectionViewDataS
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         if collectionView == recommendationsCollection, indexPath.row == viewModel.movie.recommendedMovies.count - 1, viewModel.recommendedsCurrentPageCount < viewModel.recommendedsTotalPageCount {
-            viewModel.fetchRecommendations() { [weak self] in
-                self?.recommendationsCollection.reloadData()
-            }
+            viewModel.fetchRecommendations()
         }
     }
     
