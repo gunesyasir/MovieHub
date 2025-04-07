@@ -148,8 +148,8 @@ extension DBManagerProtocol {
     }
 }
 
-struct DBManager: DBManagerProtocol {
+struct MovieDBManager: DBManagerProtocol {
     typealias Model = Movie
-    static let shared = DBManager()
+    static let shared = MovieDBManager()
     private init() {}
 }

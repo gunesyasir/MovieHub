@@ -9,7 +9,7 @@ import Foundation
 
 struct DatabaseUtils {
     static func updateDataIfMovieExistsInDatabase(for movie: Movie) {
-        let manager = DBManager.shared
+        let manager = MovieDBManager.shared
         manager.isObjectInDatabase(primaryKey: movie.id) { result in
             switch result {
             case .success(let isExists):

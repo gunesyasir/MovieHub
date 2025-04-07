@@ -30,7 +30,7 @@ class MovieDetailViewModel {
     }
     
     func addToPersistentStorage(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
-        DBManager.shared.saveObject(movie, completion: completion)
+        MovieDBManager.shared.saveObject(movie, completion: completion)
     }
     
     func fetchMovieCast(completion: @escaping () -> Void) {
@@ -119,7 +119,7 @@ class MovieDetailViewModel {
     }
     
     func fetchMovieDetailFromDatabase(of id: Int, completion: @escaping () -> Void) {
-        let manager = DBManager.shared
+        let manager = MovieDBManager.shared
             manager.isObjectInDatabase(primaryKey: id) { result in
                 switch result {
                     case .success(let isExists):
@@ -148,7 +148,7 @@ class MovieDetailViewModel {
 
     
     func fetchPersistentStorageStatus(completion: @escaping () -> Void) {
-        let manager = DBManager.shared
+        let manager = MovieDBManager.shared
             manager.isObjectInDatabase(primaryKey: movie.id) { [weak self] result in
                 switch result {
                     case .success(let isExists):
@@ -162,7 +162,7 @@ class MovieDetailViewModel {
     }
     
     func observeObject(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
-        let dbManager = DBManager.shared
+        let dbManager = MovieDBManager.shared
             dbManager.observeObject(for: movie.id, objectNotificationToken: &self.notificationToken) { result in
                 switch result {
                     case .success(.change):
@@ -189,6 +189,6 @@ class MovieDetailViewModel {
     }
     
     func removeFromPersistentStorage(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
-        DBManager.shared.deleteObject(primaryKey: movie.id, completion: completion)
+        MovieDBManager.shared.deleteObject(primaryKey: movie.id, completion: completion)
     }
 }

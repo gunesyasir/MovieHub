@@ -9,7 +9,7 @@ import Foundation
 import RealmSwift
 
 class BookmarksViewModel {
-    private var dbManager = DBManager.shared
+    private var dbManager = MovieDBManager.shared
     private var errorMessage = ""
     var movieDetailData: Movie?
     private var notificationToken: NotificationToken? = nil
