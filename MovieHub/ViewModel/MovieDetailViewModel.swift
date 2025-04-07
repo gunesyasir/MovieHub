@@ -15,7 +15,7 @@ class MovieDetailViewModel {
     @Published private(set) var isCastRequestCompleted = false
     var errorMessage = ""
     private(set) var existInDatabase = CurrentValueSubject<Bool, Never>(false)
-    var movieDetailData: Movie?
+    @Published private(set) var recommendedMovieDetailData: (id: Int, movie: Movie?)?
     private var movieUpdatedInDatabase = false // DB is updated asynchronously so this flag needed to update just once.
     @Published private(set) var recommendedsCurrentPageCount = 0
     private(set) var recommendedsTotalPageCount = 0
@@ -26,7 +26,7 @@ class MovieDetailViewModel {
         self.movie = movie
         startObservingMovie()
         fetchMovieCast()
-        fetchRecommendations()
+        fetchRecommendations(at: nil)
     }
     
     deinit {
@@ -72,26 +72,24 @@ class MovieDetailViewModel {
         }
     }
     
-    func fetchMovieDetail(of id: Int, completion: @escaping () -> Void) {
+    func fetchMovieDetail(of id: Int) {
         NetworkUtils.getMovieDetail(of: id) { [weak self] result in
-            guard let self = self else {
-                completion()
-                return
-            }
+            guard let self = self else { return }
             
             switch result {
-                case .success(let data):
-                    self.movieDetailData = data
-                    completion()
-                    
-                case .failure( _):
-                    self.movieDetailData = nil
-                    self.fetchMovieDetailFromDatabase(of: id, completion: completion)
+            case .success(let data):
+                self.recommendedMovieDetailData = (id: id, movie: data)
+            case .failure( _):
+                self.fetchMovieDetailFromDatabase(of: id)
             }
         }
     }
     
-    func fetchRecommendations() {
+    func fetchRecommendations(at index: Int?) {
+        guard index == nil || (index == movie.recommendedMovies.count - 1 && recommendedsCurrentPageCount < recommendedsTotalPageCount) else {
+            return
+        }
+
         errorMessage = ""
         
         let service: RecommendationsServiceProtocol = RecommendationsService()
@@ -116,31 +114,30 @@ class MovieDetailViewModel {
         }
     }
     
-    func fetchMovieDetailFromDatabase(of id: Int, completion: @escaping () -> Void) {
+    func fetchMovieDetailFromDatabase(of id: Int) {
         let manager = DBManager.shared
-            manager.isObjectInDatabase(primaryKey: id) { result in
-                switch result {
-                    case .success(let isExists):
-                        if isExists {
-                            manager.fetchObjectByPrimaryKey(primaryKey: id) { result in
-                                switch result {
-                                    case .success(let data):
-                                        self.movieDetailData = data
-                                        completion()
-                                    case .failure( _):
-                                        self.errorMessage = LocalizedStrings.errorMessage.localized
-                                        completion()
-                                }
-                            }
-                        } else {
+        manager.isObjectInDatabase(primaryKey: id) { result in
+            switch result {
+            case .success(let isExists):
+                if isExists {
+                    manager.fetchObjectByPrimaryKey(primaryKey: id) { result in
+                        switch result {
+                        case .success(let data):
+                            self.recommendedMovieDetailData = (id: id, movie: data)
+                        case .failure( _):
                             self.errorMessage = LocalizedStrings.errorMessage.localized
-                            completion()
+                            self.recommendedMovieDetailData = (id: id, movie: nil)
                         }
-                    case .failure( _):
-                        self.errorMessage = LocalizedStrings.errorMessage.localized
-                        completion()
+                    }
+                } else {
+                    self.errorMessage = LocalizedStrings.errorMessage.localized
+                    self.recommendedMovieDetailData = (id: id, movie: nil)
                 }
+            case .failure( _):
+                self.errorMessage = LocalizedStrings.errorMessage.localized
+                self.recommendedMovieDetailData = (id: id, movie: nil)
             }
+        }
     }
     
     private func startObservingMovie() {

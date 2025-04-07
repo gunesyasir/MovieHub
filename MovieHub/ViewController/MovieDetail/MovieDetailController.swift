@@ -80,18 +80,25 @@ final class MovieDetailController: BaseViewController {
     }
     
     func fetchMovieDetail(of id: Int) {
-        viewModel.fetchMovieDetail(of: id) { [weak self] in
-            if let movie = self?.viewModel.movieDetailData {
-                NavigationUtils.navigateToMovieDetail(from: self!, movie: movie)
-            } else {
-                self?.showError(message: self!.viewModel.errorMessage, onTryAgain: {
-                    self?.fetchMovieDetail(of: id)
-                })
-            }
-        }
+        viewModel.fetchMovieDetail(of: id)
     }
     
     private func setBindings() {
+        
+        viewModel.$recommendedMovieDetailData
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] data in
+                guard let data = data, let self = self else { return }
+                if let movie = data.movie {
+                    NavigationUtils.navigateToMovieDetail(from: self, movie: movie)
+                } else {
+                    self.showError(message: self.viewModel.errorMessage, onTryAgain: {
+                        self.fetchMovieDetail(of: data.id)
+                    })
+                }
+            }
+            .store(in: &cancellables)
+        
         viewModel.existInDatabase
             .receive(on: DispatchQueue.main)
             .sink { [weak self] result in

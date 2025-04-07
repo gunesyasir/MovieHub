@@ -49,14 +49,15 @@ extension MovieDetailController: UICollectionViewDelegate, UICollectionViewDataS
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
-        if collectionView == recommendationsCollection, indexPath.row == viewModel.movie.recommendedMovies.count - 1, viewModel.recommendedsCurrentPageCount < viewModel.recommendedsTotalPageCount {
-            viewModel.fetchRecommendations()
+        if collectionView == recommendationsCollection {
+            viewModel.fetchRecommendations(at: indexPath.row)
         }
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         if collectionView == recommendationsCollection {
-            fetchMovieDetail(of: viewModel.movie.recommendedMovies[indexPath.row].id)
+            let movieId = viewModel.movie.recommendedMovies[indexPath.row].id
+            fetchMovieDetail(of: movieId)
         } else if collectionView == castCollection {
             let actorId = viewModel.movie.cast[indexPath.row].id
             viewModel.fetchActorDetail(of: actorId)
