@@ -13,24 +13,22 @@ extension MovieDetailController: UICollectionViewDelegate, UICollectionViewDataS
         if collectionView == genreCollection {
             return viewModel.movie.genres.count
         } else if collectionView == castCollection {
-            return viewModel.isCastRequestCompleted ? viewModel.movie.cast.count : 10 // Default skeleton container count
+            return viewModel.isCastRequestCompleted ? viewModel.castList.count : 10 // Default skeleton container count
         } else { // Recommendations collection
-            return viewModel.isRecommendedsRequestCompleted ? viewModel.movie.recommendedMovies.count : 10 // Default skeleton container count
+            return viewModel.isRecommendedsRequestCompleted ? viewModel.recommendedMovieList.count : 10 // Default skeleton container count
         }
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         if collectionView == genreCollection {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: GenreCell.self), for: indexPath) as! GenreCell
-            cell.genreLabel.text = viewModel.movie.genres[indexPath.row].name ?? ""
+            cell.genreLabel.text = viewModel.genreName(at: indexPath.row)
             cell.setBorder(radius: 8)
             return cell
         } else { // Cast and Recommendations collection
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: ContentCell.self), for: indexPath) as! ContentCell
             
             let isCast = collectionView == castCollection
-            let castList = viewModel.movie.cast
-            let movieList = viewModel.movie.recommendedMovies
             
             if isCast && !viewModel.isCastRequestCompleted || !isCast && !viewModel.isRecommendedsRequestCompleted {
                 cell.addShimmer()
@@ -38,11 +36,12 @@ extension MovieDetailController: UICollectionViewDelegate, UICollectionViewDataS
             }
             cell.removeShimmer()
             
-            let url = ImageUtils.getImageURL(from: isCast ? castList[indexPath.row].profilePath : movieList[indexPath.row].posterPath)
-            cell.image.setImage(with: url)
+            let item: MovieDetailCollectionContentPresentable? = isCast ? viewModel.castItem(at: indexPath.row) : viewModel.recommendedMovieItem(at: indexPath.row)
+            guard let item = item else { return cell }
             
-            cell.title.text = isCast ? castList[indexPath.row].name : movieList[indexPath.row].title
-            cell.subtitle.text = isCast ? castList[indexPath.row].character : ""
+            cell.image.setImage(with: item.imageURL)
+            cell.title.text = item.titleText
+            cell.subtitle.text = item.subtitleText
             
             return cell
         }
@@ -63,4 +62,11 @@ extension MovieDetailController: UICollectionViewDelegate, UICollectionViewDataS
             viewModel.fetchActorDetail(of: actorId)
         }
     }
+}
+
+protocol MovieDetailCollectionContentPresentable {
+    var id: Int { get }
+    var titleText: String? { get }
+    var subtitleText: String? { get }
+    var imageURL: URL? { get }
 }

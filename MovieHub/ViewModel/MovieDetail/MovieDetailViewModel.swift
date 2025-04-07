@@ -21,6 +21,75 @@ class MovieDetailViewModel {
     private(set) var recommendedsTotalPageCount = 0
     @Published private(set) var isRecommendedsRequestCompleted = false
     private var notificationToken: NotificationToken? = nil
+    var tableViewData: [[String: Any]] {
+        var data: [[String: Any]] = []
+        if let title = movie.originalTitle, !title.isEmpty {
+            data.append([LocalizedStrings.originalTitle.localized : title])
+        }
+        if let budget = movie.budget, budget != 0 {
+            data.append([LocalizedStrings.budget.localized : budget])
+        }
+        if let revenue = movie.revenue, revenue != 0 {
+            data.append([LocalizedStrings.revenue.localized : revenue])
+        }
+        let companies = Array(movie.productionCompanies)
+        if companies.count > 0, let name = companies[0].name {
+            data.append([LocalizedStrings.productionCompany.localized: name])
+        }
+        
+        return data
+    }
+    var title: String? {
+        movie.title
+    }
+    var backdropUrl: URL? {
+        ImageUtils.getImageURL(from: movie.backdropPath)
+    }
+    var posterUrl: URL? {
+        ImageUtils.getImageURL(from: movie.posterPath)
+    }
+    var movieInfoLine: String? {
+        var parts: [String] = []
+        
+        if let runtime = movie.runtime {
+            parts.append("🕓 \(runtime)")
+        }
+
+        if let rate = movie.voteAverage {
+            parts.append("⭐️ \(rate.toOneDecimalPoint())")
+        }
+
+        if let langCode = movie.spokenLanguages.first?.code,
+           let language = LanguageUtils.getLocalizedLanguageName(fromCode: langCode) {
+            parts.append("🔊 \(language)")
+        }
+        
+        return parts.isEmpty ? nil : parts.joined(separator: "  ")
+    }
+    var releaseDate: String? {
+        DateUtils.convertToMonthAndYearFormat(from: movie.releaseDate)
+    }
+    var overview: String? {
+        movie.overview
+    }
+    var castLabel: String {
+        LocalizedStrings.cast.localized
+    }
+    var recommendationsLabel: String {
+        LocalizedStrings.recommendations.localized
+    }
+    var shouldShowGenres: Bool {
+        !movie.genres.isEmpty
+    }
+    var shouldShowHomepageButton: Bool {
+        guard let page = movie.homepage else { return false }
+        return URL(string: page) != nil
+    }
+    var homepageUrl: URL {
+        return URL(string: movie.homepage!)! // Non-optional because shouldShowHomepageButton assures it
+    }
+    var castList: [CastViewModel] = []
+    var recommendedMovieList: [RecommendedMovieViewModel] = []
 
     init(movie: Movie) {
         self.movie = movie
@@ -48,6 +117,7 @@ class MovieDetailViewModel {
             case .success(let data):
                 let list = data.cast.filter { $0.role == ACTING }
                 movie.cast.append(objectsIn: list)
+                self.castList = list.map { CastViewModel(cast: $0) }
                 
             case .failure( _):
                 self.errorMessage = LocalizedStrings.errorMessage.localized
@@ -57,7 +127,7 @@ class MovieDetailViewModel {
             self.updateDataIfMovieExistsInDatabase()
         }
     }
-    
+
     func fetchActorDetail(of id: Int) {
         let service: CastDetailServiceProtocol = CastDetailService()
         service.getCastDetail(of: id) { result in
@@ -102,6 +172,8 @@ class MovieDetailViewModel {
                     RecommendedMovie(from: movie)
                 }
                 movie.recommendedMovies.append(objectsIn: recommendedMovies)
+                let movies = recommendedMovies.map { RecommendedMovieViewModel(movie: $0) }
+                self.recommendedMovieList.append(contentsOf: movies)
                 self.recommendedsCurrentPageCount = data.page ?? self.recommendedsCurrentPageCount + 1
                 self.recommendedsTotalPageCount = data.totalPages ?? self.recommendedsTotalPageCount
                 
@@ -183,5 +255,19 @@ class MovieDetailViewModel {
     
     private func removeFromPersistentStorage(completion: @escaping (Result<Void, DBManagerError>) -> Void) {
         DBManager.shared.deleteObject(primaryKey: movie.id, completion: completion)
+    }
+    
+    func genreName(at index: Int) -> String {
+        return movie.genres[index].name ?? ""
+    }
+    
+    func castItem(at index: Int) -> CastViewModel? {
+        guard index < castList.count else { return nil }
+        return castList[index]
+    }
+    
+    func recommendedMovieItem(at index: Int) -> RecommendedMovieViewModel? {
+        guard index < recommendedMovieList.count else { return nil }
+        return recommendedMovieList[index]
     }
 }
