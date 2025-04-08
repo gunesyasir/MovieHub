@@ -22,8 +22,8 @@ protocol DBManagerProtocol {
     func fetchAllObjects(completion: @escaping (Result<[Model], DBManagerError>) -> Void)
     func isObjectInDatabase(primaryKey: Any, completion: @escaping (Result<Bool, DBManagerError>) -> Void)
 
-    func observeChanges(notificationToken: inout NotificationToken?, completion: @escaping (Result<RealmCollectionChangeStatus, DBManagerError>) -> Void)
-    func observeObject(for primaryKey: Any, objectNotificationToken: inout NotificationToken?, completion: @escaping (Result<RealmObjectChangeStatus, DBManagerError>) -> Void)
+    func observeCollection(notificationToken: inout NotificationToken?, completion: @escaping (Result<RealmCollectionChangeStatus, DBManagerError>) -> Void)
+    func observeObject(for primaryKey: Any, objectNotificationToken: inout NotificationToken?, completion: @escaping (Result<RealmObjectStatus, DBManagerError>) -> Void)
 }
 
 extension DBManagerProtocol {
@@ -101,7 +101,7 @@ extension DBManagerProtocol {
         completion(.success(exists))
     }
 
-    func observeChanges(notificationToken: inout NotificationToken?, completion: @escaping (Result<RealmCollectionChangeStatus, DBManagerError>) -> Void) {
+    func observeCollection(notificationToken: inout NotificationToken?, completion: @escaping (Result<RealmCollectionChangeStatus, DBManagerError>) -> Void) {
         guard let realm = realm else {
             completion(.failure(.initializationFailed))
             return
@@ -118,31 +118,34 @@ extension DBManagerProtocol {
                 let insertions: [IndexPath] = insertions.map { IndexPath(row: $0, section: 0) }
                 let modifications: [IndexPath] = modifications.map { IndexPath(row: $0, section: 0) }
                 completion(.success(.update(deletions: deletions, insertions: insertions, modifications: modifications)))
-            case .error(let error):
+            case .error(_):
                 completion(.failure(.operationFailed))
             }
         }
     }
 
-    func observeObject(for primaryKey: Any, objectNotificationToken: inout NotificationToken?, completion: @escaping (Result<RealmObjectChangeStatus, DBManagerError>) -> Void) {
+    func observeObject(for primaryKey: Any, objectNotificationToken: inout NotificationToken?, completion: @escaping (Result<RealmObjectStatus, DBManagerError>) -> Void) {
         guard let realm = realm else {
             completion(.failure(.initializationFailed))
             return
         }
-
-        guard let object = realm.object(ofType: Model.self, forPrimaryKey: primaryKey) else {
-            completion(.failure(.operationFailed))
-            return
-        }
-
-        objectNotificationToken = object.observe { change in
-            switch change {
-            case .change(_, _):
-                completion(.success(.change))
-            case .deleted:
-                completion(.success(.delete))
-            case .error(let error):
+        
+        let results = realm.objects(Model.self).filter("id == %@", primaryKey)
+        objectNotificationToken = results.observe { changes in
+            switch changes {
+            case .initial(let objects):
+                completion(.success(objects.count > 0 ? .exist : .nonExist))
+                break
+            case .update(_, let deletions, let insertions, let modifications):
+                if !insertions.isEmpty || !modifications.isEmpty {
+                    completion(.success(.exist))
+                } else if !deletions.isEmpty {
+                    completion(.success(.nonExist))
+                }
+                break
+            case .error(_):
                 completion(.failure(.operationFailed))
+                break
             }
         }
     }

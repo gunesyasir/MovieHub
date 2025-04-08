@@ -67,7 +67,7 @@ class PopularMoviesViewModel {
     }
     
     func observeChanges(completion: @escaping (Result<RealmCollectionChangeStatus, DBManagerError>) -> Void) {
-        MovieDBManager.shared.observeChanges(notificationToken: &self.notificationToken) { result in
+        MovieDBManager.shared.observeCollection(notificationToken: &self.notificationToken) { result in
             switch result {
             case .success(let status):
                 completion(.success(status))

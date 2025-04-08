@@ -9,13 +9,13 @@ import UIKit
 
 extension MovieDetailController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return tableViewData.count
+        return viewModel.tableViewData.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: String(describing: DictionaryCell.self)) as! DictionaryCell
         
-        let dictionary = tableViewData[indexPath.row]
+        let dictionary = viewModel.tableViewData[indexPath.row]
         
         if let (key, value) = dictionary.first {
             cell.leftLabel.text = key

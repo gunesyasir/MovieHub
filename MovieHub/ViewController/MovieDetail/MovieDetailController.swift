@@ -7,6 +7,7 @@
 
 import UIKit
 import WebKit
+import Combine
 
 final class MovieDetailController: BaseViewController {
     @IBOutlet weak var addButton: UIButton!
@@ -27,68 +28,27 @@ final class MovieDetailController: BaseViewController {
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var upperLabelsStack: UIStackView!
     
-    let movie: Movie
     let viewModel: MovieDetailViewModel
+    private var isSinkedFirstTime = false
+    private var cancellables = Set<AnyCancellable>()
     private var webView = WKWebView()
-    var tableViewData: [[String: Any]] {
-        var data: [[String: Any]] = []
-        if let title = movie.originalTitle, !title.isEmpty {
-            data.append([LocalizedStrings.originalTitle.localized : title])
-        }
-        if let budget = movie.budget, budget != 0 {
-            data.append([LocalizedStrings.budget.localized : budget])
-        }
-        if let revenue = movie.revenue, revenue != 0 {
-            data.append([LocalizedStrings.revenue.localized : revenue])
-        }
-        let companies = Array(movie.productionCompanies)
-        if companies.count > 0, let name = companies[0].name {
-            data.append([LocalizedStrings.productionCompany.localized: name])
-        }
-        
-        return data
-    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setUpViews()
-        fetchData()
-        observeObjectInDatabase()
+        setBindings()
     }
     
     @IBAction func addButtonPressed(_ sender: UIButton) {
-        if viewModel.existInDatabase {
-            viewModel.removeFromPersistentStorage() { [weak self] result in
-                switch result {
-                    case .success( _):
-                        self?.viewModel.existInDatabase = false
-                    case .failure( _):
-                        break
-                }
-            }
-        } else {
-            viewModel.addToPersistentStorage() { [weak self] result in
-                switch result {
-                    case .success( _):
-                        self?.viewModel.existInDatabase = true
-                    case .failure( _):
-                        break
-                }
-            }
-        }
-        
-        setButton()
+        viewModel.updateDatabase()
     }
     
     @IBAction func homepageButtonPressed(_ sender: UIButton) {
-        if let page = movie.homepage, let url = URL(string: page) {
-            webView.isHidden = false
-            webView.load(URLRequest(url: url))
-        }
+        webView.isHidden = false
+        webView.load(URLRequest(url: viewModel.homepageUrl))
     }
 
     init?(coder: NSCoder, movie: Movie) {
-        self.movie = movie
         viewModel = MovieDetailViewModel(movie: movie)
         super.init(coder: coder)
     }
@@ -97,92 +57,93 @@ final class MovieDetailController: BaseViewController {
         fatalError("Use `init(coder:movie:)` to initialize.")
     }
     
-    private func fetchData() {
-        viewModel.fetchPersistentStorageStatus() { [weak self] in
-            self?.addButton.removeShimmer()
-            self?.setButton()
-        }
+    func fetchMovieDetail(of id: Int) {
+        viewModel.fetchMovieDetail(of: id)
+    }
+    
+    private func setBindings() {
         
-        viewModel.fetchMovieCast() { [weak self] in
-            guard let self = self else { return }
-            
-            self.viewModel.castRequestCompleted = true
-            
-            if self.viewModel.movie.cast.isEmpty {
-                castLabel.removeFromSuperview()
-                castCollection.removeFromSuperview()
-                recommendationsLabel.topAnchor.constraint(equalTo: tableView.bottomAnchor, constant: 12).isActive = true
-            }
-            
-            self.castCollection.reloadData()
-            
-            self.viewModel.updateDataIfMovieExistsInDatabase()
-        }
-        
-        viewModel.fetchRecommendations() { [weak self] in
-            guard let self = self else { return }
-            
-            self.viewModel.recommendedsRequestCompleted = true
-            
-            if self.viewModel.movie.recommendedMovies.isEmpty {
-                recommendationsLabel.removeFromSuperview()
-                recommendationsCollection.removeFromSuperview()
-                if self.viewModel.castRequestCompleted && self.viewModel.movie.cast.isEmpty { // No castList to reference in this case
-                    tableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true
+        viewModel.$recommendedMovieDetailData
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] data in
+                guard let data = data, let self = self else { return }
+                if let movie = data.movie {
+                    NavigationUtils.navigateToMovieDetail(from: self, movie: movie)
                 } else {
-                    castCollection.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true
+                    self.showError(message: self.viewModel.errorMessage, onTryAgain: {
+                        self.fetchMovieDetail(of: data.id)
+                    })
+                }
+            }
+            .store(in: &cancellables)
+        
+        viewModel.existInDatabase
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] result in
+                guard let self = self else { return }
+                if !self.isSinkedFirstTime {
+                    self.isSinkedFirstTime = true
+                    self.addButton.removeShimmer()
+                }
+                self.setButton()
+            }
+            .store(in: &cancellables)
+        
+        viewModel.$isCastRequestCompleted
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] value in
+                guard let self = self, value == true else { return }
+                
+                if self.viewModel.castList.isEmpty {
+                    castLabel.removeFromSuperview()
+                    castCollection.removeFromSuperview()
+                    recommendationsLabel.topAnchor.constraint(equalTo: tableView.bottomAnchor, constant: 12).isActive = true
+                } else {
+                    self.castCollection.reloadData()
+                }
+            }
+            .store(in: &cancellables)
+        
+        viewModel.$isRecommendedsRequestCompleted
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] value in
+                guard let self = self, value == true else { return }
+                
+                if self.viewModel.recommendedsCurrentPageCount <= 1 { // Works on initial request, does not on pagination requests
+                    if self.viewModel.recommendedMovieList.isEmpty {
+                        recommendationsLabel.removeFromSuperview()
+                        recommendationsCollection.removeFromSuperview()
+                        if self.viewModel.isCastRequestCompleted && self.viewModel.castList.isEmpty { // No castList to reference in this case
+                            tableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true
+                        } else {
+                            castCollection.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24).isActive = true
+                        }
+                        return
+                    }
                 }
                 
+                self.recommendationsCollection.reloadData()
             }
-            
-            self.recommendationsCollection.reloadData()
-            
-            self.viewModel.updateDataIfMovieExistsInDatabase()
-        }
-    }
-    
-    func fetchCastDetail(of id: Int) {
-        viewModel.fetchCastDetail(of: id) { [weak self] in
-            if let actor = self?.viewModel.actorDetailData {
-                NavigationUtils.navigateToActorDetail(from: self!, actor: actor)
-            }
-        }
-    }
-    
-    func fetchMovieDetail(of id: Int) {
-        viewModel.fetchMovieDetail(of: id) { [weak self] in
-            if let movie = self?.viewModel.movieDetailData {
-                NavigationUtils.navigateToMovieDetail(from: self!, movie: movie)
-            } else {
-                self?.showError(message: self!.viewModel.errorMessage, onTryAgain: {
-                    self?.fetchMovieDetail(of: id)
-                })
-            }
-        }
-    }
-    
-    private func observeObjectInDatabase() {
-        viewModel.observeObject() { [weak self] result in
-            guard let self = self else { return }
-            
-            DispatchQueue.main.async {
-                switch result {
-                    case .success:
-                        self.setButton()
-                    case .failure(_):
-                        break
+            .store(in: &cancellables)
+        
+        viewModel.$actorDetailData
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] data in
+                if let self = self, let actor = data {
+                    NavigationUtils.navigateToActorDetail(from: self, actor: actor)
                 }
             }
-        }
+            .store(in: &cancellables)
     }
     
     private func setButton() {
-        addButton.backgroundColor = UIColor(named: self.viewModel.existInDatabase ? "TabbarLabelColor" : "Orange")
-        addButton.setTitle(self.viewModel.existInDatabase ? LocalizedStrings.removeFromBookmarks.localized : LocalizedStrings.addToBookmarks.localized, for: .normal)
+        let isExists = viewModel.existInDatabase.value
+        addButton.backgroundColor = UIColor(named: isExists ? "TabbarLabelColor" : "Orange")
+        addButton.setTitle(isExists ? LocalizedStrings.removeFromBookmarks.localized : LocalizedStrings.addToBookmarks.localized, for: .normal)
         addButton.setTitleColor(UIColor(named: "TabbarColor"), for: .normal)
         addButton.layer.cornerRadius = 8
-        addButton.setImage(UIImage(systemName: self.viewModel.existInDatabase ? "bookmark.slash.fill" : "plus")?.withRenderingMode(.alwaysTemplate), for: .normal)
-        addButton.tintColor = self.viewModel.existInDatabase ? .gray : UIColor(named: "TabbarColor")
+        addButton.setImage(UIImage(systemName: isExists ? "bookmark.slash.fill" : "plus")?.withRenderingMode(.alwaysTemplate), for: .normal)
+        addButton.tintColor = isExists ? .gray : UIColor(named: "TabbarColor")
     }
     
     private func setupCollectionView(for collectionView: UICollectionView, of type: UICollectionViewCell.Type, autoSized: Bool = false) {
@@ -204,7 +165,8 @@ final class MovieDetailController: BaseViewController {
         tableView.register(DictionaryCell.getNib(), forCellReuseIdentifier: String(describing: DictionaryCell.self))
         let rowHeight = CGFloat(30)
         tableView.rowHeight = rowHeight
-        tableView.heightAnchor.constraint(equalToConstant: CGFloat(tableViewData.count) * rowHeight + CGFloat(tableViewData.count)).isActive = true
+        let rowCount = viewModel.tableViewData.count
+        tableView.heightAnchor.constraint(equalToConstant: CGFloat(rowCount) * rowHeight + CGFloat(rowCount)).isActive = true
     }
     
     private func setupWebView() {
@@ -214,16 +176,16 @@ final class MovieDetailController: BaseViewController {
     }
 
     private func setUpViews() {
-        title = movie.title
+        title = viewModel.title
         let textAttributes = [NSAttributedString.Key.foregroundColor:UIColor.init(named: "TabbarLabelColor")] as? [NSAttributedString.Key : Any]
         navigationController?.navigationBar.titleTextAttributes = textAttributes
         
         scrollView.delegate = self
         
-        let backdropURL = ImageUtils.getImageURL(from: movie.backdropPath)
+        let backdropURL = viewModel.backdropUrl
         backdropImage.setImage(with: backdropURL)
         
-        let posterURL = ImageUtils.getImageURL(from: movie.posterPath)
+        let posterURL = viewModel.posterUrl
         if let url = posterURL {
             posterImage.setImage(with: url)
         } else {
@@ -231,41 +193,29 @@ final class MovieDetailController: BaseViewController {
             upperLabelsStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16).isActive = true
         }
         
-        if let runtime = movie.runtime, let langCode = movie.spokenLanguages.first?.code, let language = LanguageUtils.getLocalizedLanguageName(fromCode: langCode), let rate = movie.voteAverage {
-            duration.text = "🕓 \(runtime)  ⭐️ \(rate.toOneDecimalPoint())  🔊 \(language)"
-        } else if let runtime = movie.runtime, let rate = movie.voteAverage {
-            duration.text = "🕓 \(runtime)  ⭐️ \(rate.toOneDecimalPoint())"
-        } else if let runtime = movie.runtime, let langCode = movie.spokenLanguages.first?.code, let language = LanguageUtils.getLocalizedLanguageName(fromCode: langCode) {
-            duration.text = "🕓 \(runtime)  🔊 \(language)"
-        } else if let langCode = movie.spokenLanguages.first?.code, let language = LanguageUtils.getLocalizedLanguageName(fromCode: langCode), let rate = movie.voteAverage {
-            duration.text = "⭐️ \(rate)  🔊 \(language)"
-        } else if let runtime = movie.runtime {
-            duration.text = "🕓 \(runtime)"
-        } else if let rate = movie.voteAverage {
-            duration.text = "⭐️ \(rate)"
-        } else if let langCode = movie.spokenLanguages.first?.code, let language = LanguageUtils.getLocalizedLanguageName(fromCode: langCode) {
-            duration.text = "🔊 \(language)"
+        if let infoLine = viewModel.movieInfoLine {
+            duration.text = infoLine
         } else {
             duration.removeFromSuperview()
         }
 
-        releaseDate.text = DateUtils.convertToMonthAndYearFormat(from: movie.releaseDate)
-        name.text = movie.title
-        overviewLabel.text = movie.overview
+        releaseDate.text = viewModel.releaseDate
+        name.text = viewModel.title
+        overviewLabel.text = viewModel.overview
         
-        castLabel.text = LocalizedStrings.cast.localized
-        recommendationsLabel.text = LocalizedStrings.recommendations.localized
+        castLabel.text = viewModel.castLabel
+        recommendationsLabel.text = viewModel.recommendationsLabel
         
         addButton.addShimmer()
 
-        if movie.genres.isEmpty {
+        if viewModel.shouldShowGenres {
+            setupCollectionView(for: genreCollection, of: GenreCell.self, autoSized: true)
+        } else {
             genreCollection.removeFromSuperview()
             addButton.topAnchor.constraint(equalTo: overviewLabel.bottomAnchor, constant: 12).isActive = true
-        } else {
-            setupCollectionView(for: genreCollection, of: GenreCell.self, autoSized: true)
         }
         
-        if let page = movie.homepage, let _ = URL(string: page) {
+        if viewModel.shouldShowHomepageButton {
             homepageButton.configuration?.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0)
         } else {
             homepageButton.removeFromSuperview()
