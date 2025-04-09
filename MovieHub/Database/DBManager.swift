@@ -18,7 +18,7 @@ protocol DBManagerProtocol {
 
     func saveObject(_ object: Model, completion: @escaping (Result<Void, DBManagerError>) -> Void)
     func deleteObject(primaryKey: Any, completion: @escaping (Result<Void, DBManagerError>) -> Void)
-    func fetchObjectByPrimaryKey(primaryKey: Any, completion: @escaping (Result<Model?, DBManagerError>) -> Void)
+    func fetchObjectByPrimaryKey(primaryKey: Any, fetchType: RealmFetchType, completion: @escaping (Result<Model?, DBManagerError>) -> Void)
     func fetchAllObjects(completion: @escaping (Result<[Model], DBManagerError>) -> Void)
     func isObjectInDatabase(primaryKey: Any, completion: @escaping (Result<Bool, DBManagerError>) -> Void)
 
@@ -71,14 +71,25 @@ extension DBManagerProtocol {
         }
     }
     
-    func fetchObjectByPrimaryKey(primaryKey: Any, completion: @escaping (Result<Model?, DBManagerError>) -> Void) {
+    func fetchObjectByPrimaryKey(primaryKey: Any, fetchType: RealmFetchType = .managed, completion: @escaping (Result<Model?, DBManagerError>) -> Void) {
         guard let realm = realm else {
             completion(.failure(.initializationFailed))
             return
         }
         
         let object = realm.object(ofType: Model.self, forPrimaryKey: primaryKey)
-        completion(.success(object))
+        
+        switch fetchType {
+        case .managed:
+            completion(.success(object))
+        case .detached:
+            if let object = object {
+                let detachedObject = object.detached()
+                completion(.success(detachedObject))
+            } else {
+                completion(.success(nil))
+            }
+        }
     }
     
     func fetchAllObjects(completion: @escaping (Result<[Model], DBManagerError>) -> Void) {

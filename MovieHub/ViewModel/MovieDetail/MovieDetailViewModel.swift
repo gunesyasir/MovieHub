@@ -192,7 +192,7 @@ class MovieDetailViewModel {
             switch result {
             case .success(let isExists):
                 if isExists {
-                    manager.fetchObjectByPrimaryKey(primaryKey: id) { result in
+                    manager.fetchObjectByPrimaryKey(primaryKey: id, fetchType: .detached) { result in
                         switch result {
                         case .success(let data):
                             self.recommendedMovieDetailData = (id: id, movie: data)
