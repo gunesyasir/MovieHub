@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Combine
 
 final class SearchViewController: BaseViewController {
     @IBOutlet weak var barItem: UITabBarItem!
@@ -13,6 +14,7 @@ final class SearchViewController: BaseViewController {
     @IBOutlet weak var tableView: UITableView!
     
     var searchMoviesViewModel = SearchMoviesViewModel()
+    private var cancellables = Set<AnyCancellable>()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,33 +23,51 @@ final class SearchViewController: BaseViewController {
         tableView.delegate = self
         tableView.dataSource = self
         tableView.register(MovieTableViewCell.getNib(), forCellReuseIdentifier: String(describing: MovieTableViewCell.self))
+        setupBindings()
+    }
+    
+    private func setupBindings() {
+        searchMoviesViewModel.$movieList
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] data in
+                guard let self = self, !data.isEmpty else { return }
+                self.tableView.reloadData()
+            }
+            .store(in: &cancellables)
+        
+        searchMoviesViewModel.$movieDetailData
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] movie in
+                guard let self = self else { return }
+                NavigationUtils.navigateToMovieDetail(from: self, movie: movie)
+            }
+            .store(in: &cancellables)
+        
+        searchMoviesViewModel.$errorEvent
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] error in
+                guard let self = self else { return }
+                switch error {
+                case .movieList(let message):
+                    self.showError(message: message, onTryAgain: {
+                        self.searchMoviesViewModel.fetchData(for: self.searchMoviesViewModel.previousQueryText)
+                    })
+                case .movieDetail(let id, let message):
+                    self.showError(message: message, onTryAgain: {
+                        self.fetchMovieDetail(of: id)
+                    })
+                }
+            }
+            .store(in: &cancellables)
     }
     
     func fetchMovies(for queryString: String) {
-        searchMoviesViewModel.fetchData(for: queryString) { [weak self] in
-            if (self?.searchMoviesViewModel.errorMessage.isEmpty ?? true) {
-                self?.tableView.reloadData()
-            } else {
-                self?.showAlertDialog(message: self?.searchMoviesViewModel.errorMessage ?? "", actions: [
-                    UIAlertAction(title: LocalizedStrings.ok.localized, style: .default, handler: nil),
-                    UIAlertAction(title: LocalizedStrings.tryAgain.localized, style: .default, handler: { _ in
-                        self?.fetchMovies(for: queryString)
-                    })
-                ])
-            }
-        }
+        searchMoviesViewModel.fetchData(for: queryString)
     }
     
     func fetchMovieDetail(of id: Int) {
-        searchMoviesViewModel.fetchMovieDetail(of: id) { [weak self] in
-            if let movie = self?.searchMoviesViewModel.movieDetailData {
-                NavigationUtils.navigateToMovieDetail(from: self!, movie: movie)
-            } else {
-                self?.showError(message: self!.searchMoviesViewModel.errorMessage, onTryAgain: {
-                    self?.fetchMovieDetail(of: id)
-                })
-            }
-        }
+        searchMoviesViewModel.fetchMovieDetail(of: id)
     }
-
 }

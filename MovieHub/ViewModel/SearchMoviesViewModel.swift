@@ -6,17 +6,23 @@
 //
 
 import Foundation
+import Combine
+
+enum SearchRequestType {
+    case movieList(message: String)
+    case movieDetail(id: Int, message: String)
+}
 
 class SearchMoviesViewModel {
-    var errorMessage = ""
-    var movieDetailData: Movie?
-    var movieList: [Movie] = []
-    var previousQueryText: String = "" // Flag to compare new request should send due to text change or new page.
-    var currentPageCount = 0
-    var totalPageCount = 0
+    @Published private(set) var errorEvent: SearchRequestType?
+    @Published private(set) var movieDetailData: Movie?
+    @Published private(set) var movieList: [Movie] = []
+    private(set) var currentPageCount = 0
+    private(set) var totalPageCount = 0
+    private(set) var previousQueryText: String = "" // Flag to compare new request should send due to text change or new page.
     
-    func fetchData(for queryText: String, completion: @escaping () -> Void) {
-        errorMessage = ""
+    func fetchData(for queryText: String) {
+        errorEvent = nil
         
         let sentDueToPagination = previousQueryText == queryText
         self.previousQueryText = queryText
@@ -27,8 +33,8 @@ class SearchMoviesViewModel {
         }
         
         let service: SearchMoviesServiceProtocol = SearchMoviesService()
-        service.searchMovies(for: queryText, pageAt: currentPageCount + 1) { result in
-            
+        service.searchMovies(for: queryText, pageAt: currentPageCount + 1) { [weak self] result in
+            guard let self = self else { return }
             switch result {
             case .success(let data):
                 if (sentDueToPagination) {
@@ -39,32 +45,26 @@ class SearchMoviesViewModel {
                 
                 self.currentPageCount = data.page ?? self.currentPageCount + 1
                 self.totalPageCount = data.totalPages ?? self.totalPageCount
-                completion()
                 
             case .failure(_):
-                self.errorMessage = LocalizedStrings.errorMessage.localized
-                completion()
+                self.errorEvent = .movieList(message: LocalizedStrings.errorMessage.localized)
             }
         }
     }
     
-    func fetchMovieDetail(of id: Int, completion: @escaping () -> Void) {
-        errorMessage = ""
+    func fetchMovieDetail(of id: Int) {
+        errorEvent = nil
+        
         NetworkUtils.getMovieDetail(of: id) { [weak self] result in
-            guard let self = self else {
-                completion()
-                return
-            }
+            guard let self = self else { return }
             
             switch result {
             case .success(let data):
                 self.movieDetailData = data
-                completion()
                 
             case .failure( _):
                 self.movieDetailData = nil
-                self.errorMessage = LocalizedStrings.errorMessage.localized
-                completion()
+                self.errorEvent = .movieDetail(id: id, message: LocalizedStrings.errorMessage.localized)
             }
         }
     }

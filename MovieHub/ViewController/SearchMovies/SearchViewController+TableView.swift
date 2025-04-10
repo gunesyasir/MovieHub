@@ -24,11 +24,7 @@ extension SearchViewController: UITableViewDelegate, UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
         if indexPath.row == searchMoviesViewModel.movieList.count - 1, searchMoviesViewModel.currentPageCount < searchMoviesViewModel.totalPageCount {
-            searchMoviesViewModel.fetchData(for: searchMoviesViewModel.previousQueryText) { [weak self] in
-                if (self?.searchMoviesViewModel.errorMessage.isEmpty ?? true) {
-                    self?.tableView.reloadData()
-                }
-            }
+            searchMoviesViewModel.fetchData(for: searchMoviesViewModel.previousQueryText)
         }
     }
     
