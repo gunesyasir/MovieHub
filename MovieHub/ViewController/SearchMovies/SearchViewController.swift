@@ -19,18 +19,24 @@ final class SearchViewController: BaseViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         searchBar.placeholder = LocalizedStrings.searchByMovie.localized
-        searchBar.delegate = self
         tableView.delegate = self
         tableView.dataSource = self
         tableView.register(MovieTableViewCell.getNib(), forCellReuseIdentifier: String(describing: MovieTableViewCell.self))
         setupBindings()
+        observeSearchBar()
     }
     
     private func setupBindings() {
         searchMoviesViewModel.$movieList
+            .dropFirst()
+            .removeDuplicates(by: { firstOutput, secondOutput in
+                let idList1 = firstOutput.map { $0.id }
+                let idList2 = secondOutput.map { $0.id }
+                return idList1 == idList2
+            })
             .receive(on: DispatchQueue.main)
             .sink { [weak self] data in
-                guard let self = self, !data.isEmpty else { return }
+                guard let self = self else { return }
                 self.tableView.reloadData()
             }
             .store(in: &cancellables)
@@ -59,6 +65,18 @@ final class SearchViewController: BaseViewController {
                         self.fetchMovieDetail(of: id)
                     })
                 }
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func observeSearchBar() {
+        NotificationCenter.default
+            .publisher(for: UISearchTextField.textDidChangeNotification, object: searchBar.searchTextField)
+            .compactMap { ($0.object as? UISearchTextField)?.text }
+            .debounce(for: .milliseconds(250), scheduler: RunLoop.main)
+            .removeDuplicates()
+            .sink { [weak self] text in
+                self?.searchMoviesViewModel.fetchData(for: text)
             }
             .store(in: &cancellables)
     }
