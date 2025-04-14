@@ -27,15 +27,9 @@ final class SearchViewController: BaseViewController {
     }
     
     private func setupBindings() {
-        searchMoviesViewModel.$movieList
-            .dropFirst()
-            .removeDuplicates(by: { firstOutput, secondOutput in
-                let idList1 = firstOutput.map { $0.id }
-                let idList2 = secondOutput.map { $0.id }
-                return idList1 == idList2
-            })
+        searchMoviesViewModel.movieListPublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] data in
+            .sink { [weak self] _ in
                 guard let self = self else { return }
                 self.tableView.reloadData()
             }
@@ -58,7 +52,7 @@ final class SearchViewController: BaseViewController {
                 switch error {
                 case .movieList(let message):
                     self.showError(message: message, onTryAgain: {
-                        self.searchMoviesViewModel.fetchData(for: self.searchMoviesViewModel.previousQueryText)
+                        self.searchMoviesViewModel.search()
                     })
                 case .movieDetail(let id, let message):
                     self.showError(message: message, onTryAgain: {
@@ -73,16 +67,8 @@ final class SearchViewController: BaseViewController {
         NotificationCenter.default
             .publisher(for: UISearchTextField.textDidChangeNotification, object: searchBar.searchTextField)
             .compactMap { ($0.object as? UISearchTextField)?.text }
-            .debounce(for: .milliseconds(250), scheduler: RunLoop.main)
-            .removeDuplicates()
-            .sink { [weak self] text in
-                self?.searchMoviesViewModel.fetchData(for: text)
-            }
+            .assign(to: \.textPublisher, on: searchMoviesViewModel)
             .store(in: &cancellables)
-    }
-    
-    func fetchMovies(for queryString: String) {
-        searchMoviesViewModel.fetchData(for: queryString)
     }
     
     func fetchMovieDetail(of id: Int) {

@@ -14,33 +14,53 @@ enum SearchRequestType {
 }
 
 class SearchMoviesViewModel {
+    private let service: SearchMoviesServiceProtocol
+    
+    private var cancellables = Set<AnyCancellable>()
+    @Published var textPublisher: String = ""
     @Published private(set) var errorEvent: SearchRequestType?
     @Published private(set) var movieDetailData: Movie?
     @Published private(set) var movieList: [Movie] = []
-    private(set) var currentPageCount = 0
-    private(set) var totalPageCount = 0
-    private(set) var previousQueryText: String = "" // Flag to compare new request should send due to text change or new page.
+    var movieListPublisher: AnyPublisher<[Movie], Never> {
+        $movieList
+            .dropFirst()
+            .removeDuplicates(by: { $0.map(\.id) == $1.map(\.id) })
+            .eraseToAnyPublisher()
+    }
+    private var currentPageCount = 0
+    private var totalPageCount = 0
     
-    func fetchData(for queryText: String) {
-        errorEvent = nil
+    init(service: SearchMoviesServiceProtocol = SearchMoviesService()) {
+        self.service = service
         
-        let sentDueToPagination = previousQueryText == queryText
-        self.previousQueryText = queryText
+        $textPublisher
+            .dropFirst()
+            .debounce(for: .milliseconds(250), scheduler: RunLoop.main)
+            .removeDuplicates()
+            .sink { [weak self] text in
+                self?.fetchData(false)
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func fetchData(_ sentDueToPagination: Bool) {
+        errorEvent = nil
         
         if !sentDueToPagination {
             currentPageCount = 0
             totalPageCount = 0
         }
-        
-        let service: SearchMoviesServiceProtocol = SearchMoviesService()
-        service.searchMovies(for: queryText, pageAt: currentPageCount + 1) { [weak self] result in
+                        
+        service.searchMovies(for: textPublisher, pageAt: currentPageCount + 1) { [weak self] result in
             guard let self = self else { return }
             switch result {
             case .success(let data):
-                if (sentDueToPagination) {
-                    self.movieList.append(contentsOf: data.results)
-                } else {
-                    self.movieList = data.results
+                DispatchQueue.main.async {
+                    if (sentDueToPagination) {
+                        self.movieList.append(contentsOf: data.results)
+                    } else {
+                        self.movieList = data.results
+                    }
                 }
                 
                 self.currentPageCount = data.page ?? self.currentPageCount + 1
@@ -67,5 +87,14 @@ class SearchMoviesViewModel {
                 self.errorEvent = .movieDetail(id: id, message: LocalizedStrings.errorMessage.localized)
             }
         }
+    }
+    
+    func loadMore(currentIndex: Int) {
+        guard currentIndex == movieList.count - 1, currentPageCount < totalPageCount else { return }
+        fetchData(true)
+    }
+    
+    func search() {
+        fetchData(false)
     }
 }
