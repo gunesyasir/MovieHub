@@ -44,7 +44,8 @@ extension PopularMoviesViewController: UICollectionViewDelegate, UICollectionVie
         
         let posterURL = ImageUtils.getImageURL(from: movie.posterPath)
         cell.moviePoster.setImage(with: posterURL)
-        cell.rating.text = "⭐️ " + (movie.voteAverage ?? 1.0).toOneDecimalPoint()
+        let rating = movie.voteAverage ?? 0.0
+        cell.rating.text = rating == 0.0 ? "⭐️ N/A" : "⭐️ \(rating.toOneDecimalPoint())"
         cell.name.text = movie.title
         cell.releaseDate.text = DateUtils.convertToMonthAndYearFormat(from: movie.releaseDate)
     }

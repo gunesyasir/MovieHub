@@ -80,7 +80,7 @@ class PopularMoviesViewModel {
     }
 
     private func observeChanges() {
-        MovieDBManager.shared.observeCollectionNew(notificationToken: &notificationToken)
+        MovieDBManager.shared.observeCollectionPublisher(notificationToken: &notificationToken)
             .sink { [weak self] value in
                 guard let self = self else { return }
                 

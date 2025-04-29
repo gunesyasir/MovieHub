@@ -28,7 +28,7 @@ protocol DBManagerProtocol {
     func fetchAllObjects(completion: @escaping (Result<[Model], DBManagerError>) -> Void)
     func isObjectInDatabase(primaryKey: Any, completion: @escaping (Result<Bool, DBManagerError>) -> Void)
 
-    func observeCollectionNew(notificationToken: inout NotificationToken?) -> AnyPublisher<RealmCollectionChangeStatusNew<Model>, Never>
+    func observeCollectionPublisher(notificationToken: inout NotificationToken?) -> AnyPublisher<RealmCollectionChangeStatusNew<Model>, Never>
     func observeCollection(notificationToken: inout NotificationToken?, completion: @escaping (Result<RealmCollectionChangeStatus, DBManagerError>) -> Void)
     func observeObject(for primaryKey: Any, objectNotificationToken: inout NotificationToken?, completion: @escaping (Result<RealmObjectStatus, DBManagerError>) -> Void)
 }
@@ -124,7 +124,7 @@ extension DBManagerProtocol {
         completion(.success(exists))
     }
     
-    func observeCollectionNew(notificationToken: inout NotificationToken?) -> AnyPublisher<RealmCollectionChangeStatusNew<Model>, Never> {
+    func observeCollectionPublisher(notificationToken: inout NotificationToken?) -> AnyPublisher<RealmCollectionChangeStatusNew<Model>, Never> {
         let subject = PassthroughSubject<RealmCollectionChangeStatusNew<Model>, Never>()
         
         guard let realm = realm else { return subject.eraseToAnyPublisher()}
