@@ -6,10 +6,16 @@
 //
 import Foundation
 import RealmSwift
+import Combine
 
 enum DBManagerError: Error {
     case initializationFailed
     case operationFailed
+}
+
+enum RealmCollectionChangeStatusNew<Model: Object> {
+    case initial([Model])
+    case update(newCollection: [Model], deletions: [Int], insertions: [Int], modifications: [Int])
 }
 
 protocol DBManagerProtocol {
@@ -22,6 +28,7 @@ protocol DBManagerProtocol {
     func fetchAllObjects(completion: @escaping (Result<[Model], DBManagerError>) -> Void)
     func isObjectInDatabase(primaryKey: Any, completion: @escaping (Result<Bool, DBManagerError>) -> Void)
 
+    func observeCollectionNew(notificationToken: inout NotificationToken?) -> AnyPublisher<RealmCollectionChangeStatusNew<Model>, Never>
     func observeCollection(notificationToken: inout NotificationToken?, completion: @escaping (Result<RealmCollectionChangeStatus, DBManagerError>) -> Void)
     func observeObject(for primaryKey: Any, objectNotificationToken: inout NotificationToken?, completion: @escaping (Result<RealmObjectStatus, DBManagerError>) -> Void)
 }
@@ -101,6 +108,11 @@ extension DBManagerProtocol {
         let objects = Array(realm.objects(Model.self))
         completion(.success(objects))
     }
+    
+    func fetchAllObjectsNew() -> Array<Model> {
+        guard let realm = realm else { return [] }
+        return Array(realm.objects(Model.self))
+    }
 
     func isObjectInDatabase(primaryKey: Any, completion: @escaping (Result<Bool, DBManagerError>) -> Void) {
         guard let realm = realm else {
@@ -110,6 +122,26 @@ extension DBManagerProtocol {
 
         let exists = realm.object(ofType: Model.self, forPrimaryKey: primaryKey) != nil
         completion(.success(exists))
+    }
+    
+    func observeCollectionNew(notificationToken: inout NotificationToken?) -> AnyPublisher<RealmCollectionChangeStatusNew<Model>, Never> {
+        let subject = PassthroughSubject<RealmCollectionChangeStatusNew<Model>, Never>()
+        
+        guard let realm = realm else { return subject.eraseToAnyPublisher()}
+        
+        let results = realm.objects(Model.self)
+        
+        notificationToken = results.observe(on: .main) { changes in
+            switch changes {
+            case .initial(let collection):
+                subject.send(.initial(Array(collection)))
+            case .update(let newCollection, let deletions, let insertions, let modifications):
+                subject.send(.update(newCollection: Array(newCollection), deletions: deletions, insertions: insertions, modifications: modifications))
+            case .error(_): break
+            }
+        }
+        
+        return subject.eraseToAnyPublisher()
     }
 
     func observeCollection(notificationToken: inout NotificationToken?, completion: @escaping (Result<RealmCollectionChangeStatus, DBManagerError>) -> Void) {

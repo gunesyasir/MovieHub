@@ -31,24 +31,14 @@ extension PopularMoviesViewController: UICollectionViewDelegate, UICollectionVie
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
-        popularMoviesViewModel.fetchMoreMoviesIfNeeded(currentIndex: indexPath.row) { [weak self] error in
-            // No need to show error message because there is already data on screen.
-            if error != nil { return }
-            self?.collectionView.reloadData()
-        }
+        popularMoviesViewModel.fetchMoreMoviesIfNeeded(currentIndex: indexPath.row)
     }
     
     func configureCell(_ cell: MovieCollectionViewCell, for movie: Movie) {
         cell.delegate = self
         
-        movieDBManager.isObjectInDatabase(primaryKey: movie.id) { result in
-            switch result {
-            case .failure( _):
-                break
-            case .success(let isBookmarked):
-                cell.isBookmarked = isBookmarked
-            }
-        }
+        let isBookmarked = popularMoviesViewModel.isBookmarked(for: movie.id)
+        cell.isBookmarked = isBookmarked
         
         cell.setShadowAndBorder(radius: 8, borderWidth: 0.5, borderColor: UIColor.clear.cgColor, shadowColor: UIColor.systemGray.cgColor, shadowRadius: 1, bounds: cell.bounds)
         
@@ -60,39 +50,9 @@ extension PopularMoviesViewController: UICollectionViewDelegate, UICollectionVie
     }
     
     func didTapBookmarkButton(_ cell: MovieCollectionViewCell) {
-        updatePersistentData(for: cell)
-    }
-    
-    private func updatePersistentData(for cell: MovieCollectionViewCell) {
         if let indexPath = collectionView.indexPath(for: cell) {
-            let movieId = popularMoviesViewModel.movieList[indexPath.row].id
-            
-            movieDBManager.fetchObjectByPrimaryKey(primaryKey: movieId){ [weak self] result in
-                switch result {
-                case .failure( _):
-                    break
-                case .success(let movie):
-                    if let movie = movie {
-                        self?.movieDBManager.deleteObject(primaryKey: movie.id) { result in
-                            switch result {
-                            case .failure( _):
-                                break
-                            case .success( _):
-                                cell.isBookmarked = !cell.isBookmarked
-                            }
-                        }
-                    } else {
-                        self?.movieDBManager.saveObject(self!.popularMoviesViewModel.movieList[indexPath.row]) { result in
-                            switch result {
-                            case .failure( _):
-                                break
-                            case .success( _):
-                                cell.isBookmarked = !cell.isBookmarked
-                            }
-                        }
-                    }
-                }
-            }
+            let movie = popularMoviesViewModel.movieList[indexPath.row]
+            popularMoviesViewModel.toggleBookmark(for: movie)
         }
     }
 }
