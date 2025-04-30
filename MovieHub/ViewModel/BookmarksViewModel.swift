@@ -14,17 +14,7 @@ class BookmarksViewModel {
     var movieDetailData: Movie?
     private var notificationToken: NotificationToken? = nil
     var movieList: [Movie] {
-        var fetchedResults: [Movie] = []
-        
-        dbManager.fetchAllObjects { result in
-            switch result {
-            case .success(let results):
-                fetchedResults = results
-            case .failure(_):
-                break
-            }
-        }
-        return fetchedResults
+        return dbManager.fetchAllObjects()
     }
     
     deinit {

@@ -105,13 +105,13 @@ class PopularMoviesViewModel {
     }
     
     private func fetchBookmarkedCollection() {
-        let objects = dbManager.fetchAllObjectsNew()
+        let objects = dbManager.fetchAllObjects()
         let ids = objects.map { $0.id }
         bookmarkedMovies = ids
     }
     
     private func fetchInitialData() {
-        fetchBookmarkedCollection()
+        fetchBookmarkedCollection() 
         observeChanges()
         fetchMovies()
     }

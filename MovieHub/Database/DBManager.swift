@@ -25,7 +25,7 @@ protocol DBManagerProtocol {
     func saveObject(_ object: Model, completion: @escaping (Result<Void, DBManagerError>) -> Void)
     func deleteObject(primaryKey: Any, completion: @escaping (Result<Void, DBManagerError>) -> Void)
     func fetchObjectByPrimaryKey(primaryKey: Any, fetchType: RealmFetchType, completion: @escaping (Result<Model?, DBManagerError>) -> Void)
-    func fetchAllObjects(completion: @escaping (Result<[Model], DBManagerError>) -> Void)
+    func fetchAllObjects() -> Array<Model>
     func isObjectInDatabase(primaryKey: Any, completion: @escaping (Result<Bool, DBManagerError>) -> Void)
 
     func observeCollectionPublisher(notificationToken: inout NotificationToken?) -> AnyPublisher<RealmCollectionChangeStatusNew<Model>, Never>
@@ -99,17 +99,7 @@ extension DBManagerProtocol {
         }
     }
     
-    func fetchAllObjects(completion: @escaping (Result<[Model], DBManagerError>) -> Void) {
-        guard let realm = realm else {
-            completion(.failure(.initializationFailed))
-            return
-        }
-        
-        let objects = Array(realm.objects(Model.self))
-        completion(.success(objects))
-    }
-    
-    func fetchAllObjectsNew() -> Array<Model> {
+    func fetchAllObjects() -> Array<Model> {
         guard let realm = realm else { return [] }
         return Array(realm.objects(Model.self))
     }
