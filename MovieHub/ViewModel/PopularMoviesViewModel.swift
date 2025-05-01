@@ -74,13 +74,18 @@ class PopularMoviesViewModel {
             case .success(let data):
                 self.movieDetailResult = .success(data)
             case .failure:
-                self.movieDetailResult = .failure(message: LocalizedStrings.errorMessage.localized, id: id)
+                guard isBookmarked(for: id), let object = dbManager.getObject(for: id) else {
+                    self.movieDetailResult = .failure(message: LocalizedStrings.errorMessage.localized, id: id)
+                    return
+                }
+                
+                self.movieDetailResult = .success(object)
             }
         }
     }
 
     private func observeChanges() {
-        MovieDBManager.shared.observeCollectionPublisher(notificationToken: &notificationToken)
+        dbManager.observeCollectionPublisher(notificationToken: &notificationToken)
             .sink { [weak self] value in
                 guard let self = self else { return }
                 

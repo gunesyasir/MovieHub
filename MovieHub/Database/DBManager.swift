@@ -24,6 +24,7 @@ protocol DBManagerProtocol {
 
     func saveObject(_ object: Model, completion: @escaping (Result<Void, DBManagerError>) -> Void)
     func deleteObject(primaryKey: Any, completion: @escaping (Result<Void, DBManagerError>) -> Void)
+    func getObject(for primaryKey: Any, fetchType: RealmFetchType) -> Model?
     func fetchObjectByPrimaryKey(primaryKey: Any, fetchType: RealmFetchType, completion: @escaping (Result<Model?, DBManagerError>) -> Void)
     func fetchAllObjects() -> Array<Model>
     func isObjectInDatabase(primaryKey: Any, completion: @escaping (Result<Bool, DBManagerError>) -> Void)
@@ -95,6 +96,24 @@ extension DBManagerProtocol {
                 completion(.success(detachedObject))
             } else {
                 completion(.success(nil))
+            }
+        }
+    }
+    
+    func getObject(for primaryKey: Any, fetchType: RealmFetchType = .managed) -> Model? {
+        guard let realm = realm else { return nil }
+        
+        let object = realm.object(ofType: Model.self, forPrimaryKey: primaryKey)
+        
+        switch fetchType {
+        case .managed:
+            return object
+        case .detached:
+            if let object = object {
+                let detachedObject = object.detached()
+                return detachedObject
+            } else {
+                return nil
             }
         }
     }
